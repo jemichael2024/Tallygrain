@@ -21,6 +21,8 @@ python3 -m http.server 8000
 
 Opening `index.html` straight from disk also works for your own uploads, but the sample menu needs a server because browsers block pixel reads from local files. Everything runs client-side; images never leave the browser.
 
+Two detection methods: **Threshold** (default; best on clean TEM/SEM with dispersed particles) and **AI model** (a small U-Net run in the browser with ONNX Runtime Web; best on STEM images of particles on catalyst supports). See [docs/accuracy.md](docs/accuracy.md) for when each wins.
+
 The app has a settings sidebar (scale, polarity, threshold, filters), a zoomable viewer with hover read-outs (click a particle to exclude it), and a results panel with summary stats, histogram, a per-particle table, and CSV/PNG export. `about.html` is the original landing page.
 
 ## How the prototype measures
@@ -56,7 +58,10 @@ index.html            the app
 about.html            landing page
 css/app.css           app styles
 js/analysis.js        segmentation + measurement (no DOM, runs in Node too)
-js/app.js             UI: loading, viewer, results, export
+js/app.js             UI: loading, viewer, results, export, AI mode
+models/               ONNX segmentation model + model card
+model/                training, export and batch-prediction scripts (PyTorch)
+vendor/               ONNX Runtime Web 1.17.3 (MIT)
 samples/              test micrographs + CREDITS.md
 docs/research.md      idea shortlist, competitors and sources
 docs/test-results.md  how it does on real images
@@ -71,6 +76,8 @@ bench/                benchmark scripts
 - [x] Split touching particles (watershed)
 - [x] Measure accuracy against images with known answers ([bench/](bench/README.md))
 - [x] Background flattening for uneven illumination
+- [x] Trained segmentation model (AI mode) for particles on supports
+- [ ] Train on more varied, shippable data (bright-field TEM, SEM)
 - [ ] Size filter / two-population view for bimodal samples
 - [ ] Read the scale bar automatically
 - [ ] Batch mode: many images in, one combined distribution out

@@ -9,4 +9,6 @@ These images are redistributed for testing. Each keeps its original licence. The
 | `tem/sio2_haadf.png` | STEM HAADF, SiO₂ particles, 128 × 128 px | 8.5524 nm/px from file metadata | `particlespy/data/SiO2 HAADF Image.hspy` in [ePSIC-DLS/ParticleSpy](https://github.com/ePSIC-DLS/ParticleSpy) @ `898612e` | GPL-3.0 (repository licence) |
 | `tem/jeol_haadf.png` | STEM HAADF (JEOL), nanoparticles, 112 × 112 px | 1.2490 nm/px from file metadata | `particlespy/data/JEOL HAADF Image.dm4` in [ePSIC-DLS/ParticleSpy](https://github.com/ePSIC-DLS/ParticleSpy) @ `898612e` | GPL-3.0 (repository licence) |
 
+| `tem/ru_catalyst_ardagen.jpg` | STEM, Ru nanoparticles on a support (image `Ru2`, held out from model training) | No scale in the dataset; sizes shown in px | `dataset/images/Ru2.jpg` in [ArdaGen/STEM-Automated-Nanoparticle-Analysis-YOLOv8-SAM](https://github.com/ArdaGen/STEM-Automated-Nanoparticle-Analysis-YOLOv8-SAM) | MIT, Copyright (c) 2023 ArdaGen |
+
 The two STEM images were converted from the original `.hspy`/`.dm4` data to 8-bit PNG with a 0.5–99.5 percentile contrast stretch (RosettaSciIO + Pillow). Pixel size comes from the files' own calibration. Neither source reports a reference particle size for these images.

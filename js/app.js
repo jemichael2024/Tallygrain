@@ -10,6 +10,7 @@
     { id: 'gold', label: 'SEM: Au on carbon (×200k)', src: 'samples/sem/gold_on_carbon_jeol.jpg', barNm: 100, barPx: 82, crop: 7, bright: true, minArea: 20, elong: 1.5 },
     { id: 'sio2', label: 'STEM: SiO₂ spheres (HAADF)', src: 'samples/tem/sio2_haadf.png', barNm: 8.5524, barPx: 1, crop: 0, bright: true, minArea: 4, elong: 1.5 },
     { id: 'jeol', label: 'STEM: nanoparticles (HAADF)', src: 'samples/tem/jeol_haadf.png', barNm: 1.2490, barPx: 1, crop: 0, bright: true, minArea: 8, elong: 1.5 },
+    { id: 'ru', label: 'STEM: Ru catalyst (AI model, size in px)', src: 'samples/tem/ru_catalyst_ardagen.jpg', barNm: 1, barPx: 1, crop: 0, bright: true, minArea: 4, elong: 1.5, method: 'ai' },
     { id: 'cathode', label: 'SEM: LiCoVO₄ cathode (dense)', src: 'samples/sem/cathode_licovo4_tescan.jpg', barNm: 1000, barPx: 387, crop: 9, bright: true, minArea: 200, elong: 1.5 }
   ];
 
@@ -26,6 +27,8 @@
   let name = '';
   let truth = null;
   let bright = true;
+  let method = 'threshold';     // 'threshold' or 'ai'
+  let prob = null, probFor = null, session = null, modelBusy = false, modelMs = 0;
 
   /* ---------- Synthetic sample ---------- */
   function rng(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -60,6 +63,7 @@
     $('barNm').value = s.barNm; $('barPx').value = s.barPx; $('crop').value = s.crop;
     $('minArea').value = s.minArea; $('elong').value = s.elong; $('solid').value = s.solid != null ? s.solid : 0.85;
     setPolarity(s.bright !== false);
+    setMethod(s.method || 'threshold');
     $('autoThr').checked = true; $('thr').disabled = true;
   }
 
@@ -122,8 +126,55 @@
     return (nm > 0 && px > 0) ? (nm / px) / scaleFactor : NaN;
   }
 
+  /* ---------- AI model (ONNX Runtime Web, loaded on first use) ---------- */
+  function loadScript(url) {
+    return new Promise((ok, fail) => { const t = document.createElement('script'); t.src = url; t.onload = ok; t.onerror = () => fail(new Error('could not load ' + url)); document.head.appendChild(t); });
+  }
+  async function ensureSession() {
+    if (session) return session;
+    if (!window.ort) await loadScript('vendor/onnxruntime-web/ort.wasm.min.js');
+    ort.env.wasm.wasmPaths = 'vendor/onnxruntime-web/';
+    ort.env.wasm.numThreads = 1;
+    session = await ort.InferenceSession.create('models/tallygrain-unet.onnx', { executionProviders: ['wasm'] });
+    return session;
+  }
+  // Same preprocessing as model/train.py: grayscale, per-image zero mean / unit variance, pad to a multiple of 16.
+  async function computeProb() {
+    const w = src.width, h = src.height, d = srcData.data, N = w * h;
+    const W = Math.ceil(w / 16) * 16, H = Math.ceil(h / 16) * 16;
+    const g = new Float32Array(N); let mean = 0;
+    for (let i = 0; i < N; i++) { g[i] = 0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2]; mean += g[i]; }
+    mean /= N; let v = 0; for (let i = 0; i < N; i++) v += (g[i] - mean) * (g[i] - mean);
+    const sd = Math.sqrt(v / N) + 1e-6, x = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      const sy = Math.min(y, h - 1), sx = Math.min(xx, w - 1);  // edge padding
+      x[y * W + xx] = (g[sy * w + sx] - mean) / sd;
+    }
+    const out = await session.run({ image: new ort.Tensor('float32', x, [1, 1, H, W]) });
+    const p = out.prob.data, fg = new Float32Array(N), core = new Float32Array(N);
+    for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) { fg[y * w + xx] = p[y * W + xx]; core[y * w + xx] = p[W * H + y * W + xx]; }
+    return { fg, core };
+  }
+  function setMethod(m) {
+    method = m;
+    $('method').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === m)));
+    document.querySelector('.thr-only').hidden = m === 'ai';
+    $('aiNote').hidden = m !== 'ai';
+  }
+
   function run() {
     if (!srcData) return;
+    if (method === 'ai' && probFor !== srcData) {
+      if (!modelBusy) {
+        modelBusy = true;
+        const t0 = performance.now();
+        status('Running the AI model on ' + src.width + ' × ' + src.height + ' px… (first run downloads the model)');
+        ensureSession().then(computeProb).then(p => {
+          prob = p; probFor = srcData; modelBusy = false; modelMs = performance.now() - t0; run();
+        }).catch(e => { modelBusy = false; setMethod('threshold'); status('The AI model could not run: ' + e.message + '. Switched back to threshold.'); run(); });
+      }
+      return;
+    }
     const s = nmPerPx();
     $('nmpx').textContent = isFinite(s) ? (s * scaleFactor).toFixed(s * scaleFactor < 1 ? 4 : 3) + ' nm/px' : 'set the scale';
     result = A.analyze(srcData.data, src.width, src.height, {
@@ -138,10 +189,13 @@
       bgCell: Math.max(0, +$('bgCell').value || 0) * scaleFactor,
       split: $('split').checked,
       splitStrength: Math.max(0.3, Math.min(2, +$('splitStrength').value || 1)),
+      prob: method === 'ai' ? prob : null,
       excluded
     });
-    if ($('autoThr').checked) { $('thr').value = result.autoThreshold; }
-    $('thrVal').textContent = result.threshold;
+    if (result.threshold != null) {
+      if ($('autoThr').checked) { $('thr').value = result.autoThreshold; }
+      $('thrVal').textContent = result.threshold;
+    }
     summary = A.summarize(result.comps);
     $('manualCount').textContent = summary.manual;
     draw(); renderStats(); renderTable(); drawHist();
@@ -228,8 +282,9 @@
     const parts = [
       Math.round(src.width / scaleFactor) + '×' + Math.round(src.height / scaleFactor) + ' px',
       (isFinite(s) ? (s * scaleFactor).toFixed(3) + ' nm/px' : 'no scale'),
+      ...(method === 'ai' ? ['AI model (' + fmt(modelMs / 1000, 1) + ' s)'] : [
       ($('flatten').checked ? 'flattened (' + Math.round((+$('bgCell').value || A.autoBgCell(src.width, result.hEff) / scaleFactor)) + ' px cells)' : 'no flattening'),
-      'threshold ' + result.threshold + ($('autoThr').checked ? ' (Otsu)' : ' (manual)'),
+      'threshold ' + result.threshold + ($('autoThr').checked ? ' (Otsu)' : ' (manual)')]),
       result.comps.length + ' regions' + (result.splitCount ? ' (' + result.splitCount + ' from splits)' : ''),
       (scaleFactor > 1 ? 'upsampled ×' + scaleFactor.toFixed(2) : scaleFactor < 1 ? 'downsampled ×' + scaleFactor.toFixed(2) : 'native'),
       fmt(result.ms, 0) + ' ms',
@@ -305,6 +360,7 @@
   });
 
   /* ---------- Controls ---------- */
+  $('method').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setMethod(b.dataset.v); run(); });
   function setPolarity(isBright) {
     bright = isBright;
     $('polarity').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String((b.dataset.v === 'bright') === isBright)));

@@ -45,6 +45,14 @@
 
     <section class="group">
       <h2>Detection</h2>
+      <div class="field"><label for="method">Method</label>
+        <div class="seg" role="radiogroup" id="method">
+          <button type="button" role="radio" aria-checked="true" data-v="threshold">Threshold</button>
+          <button type="button" role="radio" aria-checked="false" data-v="ai">AI model</button>
+        </div>
+        <p class="hint" id="aiNote" hidden>Trained on STEM/TEM images of metal nanoparticles on catalyst supports. Downloads about 18 MB the first time and runs on your computer; images are not uploaded.</p>
+      </div>
+      <div class="thr-only">
       <div class="field"><label for="polarity">Particles appear</label>
         <div class="seg" role="radiogroup" id="polarity">
           <button type="button" role="radio" aria-checked="true" data-v="bright">Bright</button>
@@ -59,6 +67,7 @@
         <div class="row-between"><label class="check strong"><input type="checkbox" id="flatten" checked> Flatten background</label></div>
         <div class="row-between"><label for="bgCell">Background scale (px, 0 = auto)</label><input id="bgCell" class="mini" type="number" min="0" step="8" value="0"></div>
         <p class="hint">Removes uneven lighting. Use a scale a few times larger than your biggest particle.</p>
+      </div>
       </div>
       <div class="field">
         <div class="row-between"><label class="check strong"><input type="checkbox" id="split" checked> Split touching particles</label></div>

@@ -144,13 +144,24 @@
      lies within strength x (radius of a stronger peak) of that peak, so one particle keeps one marker
      while two touching particles (centres about 2 radii apart) keep two. Pixels are then flooded from
      the markers in order of decreasing distance, which places the cut at the neck between particles. */
-  function watershedSplit(mask, ccLabels, nCC, w, h, hEff, strength) {
+  function watershedSplit(mask, ccLabels, nCC, w, h, hEff, strength, seeds) {
     const n = w * hEff, dt = distanceTransform(mask, w, hEff);
+    const markers = new Int32Array(mask.length);
+    const kept = new Map(); // cc label -> accepted peaks
+    let id = 0;
+    if (seeds) {
+      // Model-predicted particle cores: each connected core blob inside the mask becomes one marker.
+      const seedMask = new Uint8Array(mask.length);
+      for (let i = 0; i < n; i++) seedMask[i] = mask[i] && seeds[i] > 0.5 ? 1 : 0;
+      const sc = labelComponents(seedMask, w, hEff);
+      for (let i = 0; i < n; i++) if (sc.labels[i]) { markers[i] = sc.labels[i]; kept.set(ccLabels[i], true); }
+      id = sc.n;
+    }
     const peaks = [];
     for (let y = 0; y < hEff; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x, v = dt[i];
-        if (!mask[i] || v < 1.4) continue;
+        if (seeds || !mask[i] || v < 1.4) continue;
         let isMax = true;
         for (let dy = -1; dy <= 1 && isMax; dy++) {
           const yy = y + dy; if (yy < 0 || yy >= hEff) continue;
@@ -163,10 +174,7 @@
       }
     }
     peaks.sort((a, b) => dt[b] - dt[a]);
-    const kept = new Map(); // cc label -> accepted peaks
-    const markers = new Int32Array(mask.length);
-    let id = 0;
-    for (const p of peaks) {
+    for (const p of (seeds ? [] : peaks)) {
       const c = ccLabels[p], px = p % w, py = (p - px) / w;
       const list = kept.get(c) || [];
       let ok = true;
@@ -235,7 +243,7 @@
    * rgba: Uint8ClampedArray (w*h*4). Options:
    *  nmPerPx, bright (bool), minArea (px), elongMax, solidityMin, cropPct (bottom strip ignored),
    *  threshold (0-255, or null for Otsu), flatten (bool), bgCell (px, background cell size; auto if 0),
-   *  split (bool), splitStrength (~0.5-1.5, higher splits less),
+   *  prob ({fg, core} Float32Arrays from the segmentation model; replaces thresholding), split (bool), splitStrength (~0.5-1.5, higher splits less),
    *  excluded: [{x,y}] points the user clicked to exclude.
    */
   function analyze(rgba, w, h, o) {
@@ -245,14 +253,18 @@
     const hEff = Math.max(1, Math.floor(h * (1 - crop / 100)));
     const nEff = w * hEff;
     const bright = o.bright !== false;
-    let bl = blur3(toGray(rgba, n), w, h);
-    if (o.flatten) bl = flattenBackground(bl, w, h, hEff, o.bgCell || autoBgCell(w, hEff), bright);
-    const autoThr = otsu(bl, nEff);
-    const thr = (o.threshold == null) ? autoThr : o.threshold;
-
     const mask = new Uint8Array(n);
-    let fg = 0;
-    for (let i = 0; i < nEff; i++) { mask[i] = bright ? (bl[i] > thr) : (bl[i] < thr); fg += mask[i]; }
+    let fg = 0, autoThr = null, thr = null;
+    if (o.prob) {
+      // AI mode: the segmentation model's particle probability replaces blur + flatten + threshold.
+      for (let i = 0; i < nEff; i++) { mask[i] = o.prob.fg[i] > 0.5 ? 1 : 0; fg += mask[i]; }
+    } else {
+      let bl = blur3(toGray(rgba, n), w, h);
+      if (o.flatten) bl = flattenBackground(bl, w, h, hEff, o.bgCell || autoBgCell(w, hEff), bright);
+      autoThr = otsu(bl, nEff);
+      thr = (o.threshold == null) ? autoThr : o.threshold;
+      for (let i = 0; i < nEff; i++) { mask[i] = bright ? (bl[i] > thr) : (bl[i] < thr); fg += mask[i]; }
+    }
 
     // 1) Connected components of the mask, 8-connectivity.
     const cc = labelComponents(mask, w, hEff);
@@ -260,7 +272,7 @@
     // 2) Optionally split touching particles with a distance-transform watershed.
     let splitCount = 0;
     if (o.split) {
-      const ws = watershedSplit(mask, cc.labels, cc.n, w, h, hEff, o.splitStrength || 1);
+      const ws = watershedSplit(mask, cc.labels, cc.n, w, h, hEff, o.splitStrength || 1, o.prob && o.prob.core);
       labels = ws.labels; nLab = ws.n; splitCount = ws.n - cc.n;
     }
     // 3) Measure each region: area, centroid, bounding box, edge contact, ellipse aspect ratio.

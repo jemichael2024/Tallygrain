@@ -1,5 +1,23 @@
 # Accuracy against images with a known answer (2026-11-19)
 
+## Update: trained segmentation model (AI mode)
+
+A small U-Net (1.9 M parameters, [models/README.md](../models/README.md)) trained on CPU on 26 of the 33 ArdaGen catalyst images. Scored on the 7 held-out images, which the model never saw. Matching is stricter than the section below: a detection counts only if its bounding box overlaps a labelled box with IoU of at least 0.5.
+
+| Test set | Threshold (+ flattening, splitting) | AI model | Better? |
+|---|---|---|---|
+| ArdaGen held-out, 7 images, 1,270 particles: precision | 0.6% | **39.5%** | Yes |
+| ... recall | 13.8% | **42.4%** | Yes |
+| ... F1 | 0.011 | **0.409** | Yes |
+| ... median size error of matches | 14.8% | **9.0%** | Yes |
+| EMPS (99 SEM/TEM paper figures, 2,608 outlined particles), F1 at mask IoU 0.5 | 0.055 | **0.188** | Yes, mostly through far fewer false detections |
+| Commercial 20 nm Au, TEM bright field, D50 | **19.3 / 18.3 nm** | 22.9 / 2.6 nm | **No** |
+| Commercial 50 nm Au, median D50 of 8 images | **49.4 nm** | 15.8 nm | **No** |
+
+**Reading this:** the model is far better on what it was trained on (bright metal particles on a textured support in STEM), and helps on the mixed EMPS set, but it is worse on plain bright-field TEM of dispersed particles, which it never saw. So threshold stays the default and AI mode is a switch. The published YOLOv8 + SAM pipeline on this data reports F1 0.91, so there is still a large gap; more varied, shippable training data is the main lever.
+
+Per-image held-out results (AI model): Cu3 F1 ≈ 0.70, Pd3 0.62, Pd_silica3 0.48, PtW5 0.67, Ru2 0.75, PtCo1 0.23, PtC2 (bright-field TEM on carbon) 0.02.
+
 ## Update: background flattening
 
 Tallygrain now subtracts a smooth background before thresholding (per-cell percentile, median + mean smoothed, bilinear interpolation). It is on by default. Same benchmarks, before → after:
