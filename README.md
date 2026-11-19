@@ -27,8 +27,9 @@ The app has a settings sidebar (scale, polarity, threshold, filters), a zoomable
 2. Pick a global threshold with Otsu's method.
 3. Label connected regions (8-connectivity).
 4. Drop specks below a minimum area and regions cut by the image edge.
-5. Flag likely clusters and exclude them: aspect ratio above 1.5, or solidity (area ÷ convex-hull area) below 0.85 for regions of at least 100 px.
-6. Report the equivalent circular diameter of each remaining region:
+5. Split touching particles with a distance-transform watershed (images under 512 px wide are upsampled up to 4x first).
+6. Flag likely clusters and exclude them: aspect ratio above 1.5, or solidity (area ÷ convex-hull area) below 0.85 for regions of at least 100 px.
+7. Report the equivalent circular diameter of each remaining region:
 
 $$
 d_{\text{eq}} = 2\sqrt{\frac{A}{\pi}} \cdot s
@@ -36,11 +37,11 @@ $$
 
 where $A$ is the region area in pixels and $s$ is the scale in nm/px (scale bar length in nm divided by its length in px).
 
-On the synthetic pattern it measures a mean of 63.2 nm against a true 64.3 nm. Results on real SEM/STEM images are in [docs/test-results.md](docs/test-results.md).
+On the synthetic pattern it measures within about 2% of the true mean. Results on real SEM/STEM images are in [docs/test-results.md](docs/test-results.md).
 
 ## Known limits
 
-- Touching particles are flagged and excluded, not split. Dense samples will be undercounted.
+- Touching particles are split by watershed, but bright overlapping multilayers and densely packed grains (e.g. sintered cathodes) still fail.
 - One global threshold struggles with low-contrast TEM images and uneven backgrounds.
 - Equivalent circular diameter suits near-spherical particles only. Rods and plates need length and width.
 - Tested on four open-licence micrographs; touching particles are the dominant failure ([details](docs/test-results.md)).
@@ -62,7 +63,8 @@ docs/test-results.md  how it does on real images
 
 - [x] Test on real SEM/TEM images and record where it fails
 - [ ] Test on our own micrographs
-- [ ] Split touching particles (watershed)
+- [x] Split touching particles (watershed)
+- [ ] Measure accuracy against images with ground-truth masks
 - [ ] Read the scale bar automatically
 - [ ] Batch mode: many images in, one combined distribution out
 - [ ] Histogram export with log-normal fit

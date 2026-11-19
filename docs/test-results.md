@@ -1,5 +1,21 @@
 # Test results on real micrographs (2026-11-19)
 
+## Update: watershed splitting
+
+Feret now splits touching particles with a distance-transform watershed (markers at distance peaks, flooded in order of decreasing distance), and upsamples images narrower than 512 px by up to 4x first. Same settings as below, split strength 1.0.
+
+| Image | Measured before | Measured after | Mean d after | Notes |
+|---|---|---|---|---|
+| Synthetic pattern | 97 | 96 of 96 | 65.4 nm (truth 66.5 nm) | Different random draw from the earlier run; error about 1.7% |
+| STEM SiO₂ spheres | 4 | 180 | 48.8 nm, D50 47.4 nm, CV 20% | Most spheres now separated. Bright multilayer clumps still merge |
+| STEM nanoparticles | 2 | 16 | 9.4 nm | Nearly all particles measured |
+| SEM Au on carbon | 29 | 33 | 41.3 nm | Still bimodal; one mean is not meaningful |
+| SEM LiCoVO₄ cathode | 0 | 71 | 132.9 nm | **Not trustworthy.** The threshold picks bright facets, not grains. Packed microstructures remain out of scope |
+
+No reference sizes exist for the real images, so these counts show coverage, not accuracy.
+
+## Original run (threshold only)
+
 Method: threshold segmentation (Otsu on a 3×3 blurred image), 8-connected regions, equivalent circular diameter. Regions are excluded when they touch the image edge, fall below the minimum area, have aspect ratio above 1.5, or (when at least 100 px in area) have solidity below 0.85.
 
 | Image | Particles visible (rough) | Measured | Mean d | What went wrong |

@@ -55,6 +55,11 @@
         <div class="row-between"><label for="thr">Threshold</label><label class="check"><input type="checkbox" id="autoThr" checked> Auto (Otsu)</label></div>
         <div class="slider"><input id="thr" type="range" min="1" max="254" value="128" disabled><output id="thrVal">128</output></div>
       </div>
+      <div class="field">
+        <div class="row-between"><label class="check strong"><input type="checkbox" id="split" checked> Split touching particles</label></div>
+        <div class="row-between"><label for="splitStrength">Split strength</label><input id="splitStrength" class="mini" type="number" min="0.3" max="2" step="0.05" value="1"></div>
+        <p class="hint">Lower values split more aggressively. Small images are upsampled first so splitting has room to work.</p>
+      </div>
       <div class="pair">
         <div class="field"><label for="minArea">Min. area (px²)</label><input id="minArea" type="number" min="1" step="1" value="40"></div>
         <div class="field"><label for="elong">Cluster above AR</label><input id="elong" type="number" min="1.05" step="0.05" value="1.5"></div>

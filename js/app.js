@@ -13,7 +13,7 @@
     { id: 'cathode', label: 'SEM: LiCoVO₄ cathode (dense)', src: 'samples/sem/cathode_licovo4_tescan.jpg', barNm: 1000, barPx: 387, crop: 9, bright: true, minArea: 200, elong: 1.5 }
   ];
 
-  const MAX_W = 1600;
+  const MAX_W = 1600, MIN_W = 512;
   const src = document.createElement('canvas');
   const sctx = src.getContext('2d', { willReadFrequently: true });
   const view = $('view'), vctx = view.getContext('2d');
@@ -94,7 +94,10 @@
   }
 
   function drawImage(img) {
-    scaleFactor = Math.min(1, MAX_W / img.naturalWidth);
+    // Large images are downsampled for speed; small ones (e.g. 128 px STEM frames) are upsampled
+    // up to 4x so the distance transform has enough pixels per particle to find the necks.
+    scaleFactor = img.naturalWidth > MAX_W ? MAX_W / img.naturalWidth : Math.min(4, Math.max(1, MIN_W / img.naturalWidth));
+    sctx.imageSmoothingEnabled = true; sctx.imageSmoothingQuality = 'high';
     src.width = Math.round(img.naturalWidth * scaleFactor);
     src.height = Math.round(img.naturalHeight * scaleFactor);
     sctx.drawImage(img, 0, 0, src.width, src.height);
@@ -131,6 +134,8 @@
       solidityMin: Math.max(0, Math.min(1, +$('solid').value || 0)),
       cropPct: +$('crop').value || 0,
       threshold: $('autoThr').checked ? null : +$('thr').value,
+      split: $('split').checked,
+      splitStrength: Math.max(0.3, Math.min(2, +$('splitStrength').value || 1)),
       excluded
     });
     if ($('autoThr').checked) { $('thr').value = result.autoThreshold; }
@@ -222,7 +227,8 @@
       Math.round(src.width / scaleFactor) + '×' + Math.round(src.height / scaleFactor) + ' px',
       (isFinite(s) ? (s * scaleFactor).toFixed(3) + ' nm/px' : 'no scale'),
       'threshold ' + result.threshold + ($('autoThr').checked ? ' (Otsu)' : ' (manual)'),
-      result.comps.length + ' regions',
+      result.comps.length + ' regions' + (result.splitCount ? ' (' + result.splitCount + ' from splits)' : ''),
+      (scaleFactor > 1 ? 'upsampled ×' + scaleFactor.toFixed(2) : scaleFactor < 1 ? 'downsampled ×' + scaleFactor.toFixed(2) : 'native'),
       fmt(result.ms, 0) + ' ms',
       'zoom ' + Math.round(zoom * 100) + '%'
     ];
@@ -303,8 +309,9 @@
   $('polarity').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setPolarity(b.dataset.v === 'bright'); run(); });
   $('autoThr').addEventListener('change', () => { $('thr').disabled = $('autoThr').checked; run(); });
   $('thr').addEventListener('input', () => { $('thrVal').textContent = $('thr').value; schedule(); });
-  ['barNm', 'barPx', 'minArea', 'elong', 'solid', 'crop'].forEach(id => $(id).addEventListener('input', schedule));
+  ['barNm', 'barPx', 'minArea', 'elong', 'solid', 'crop', 'splitStrength'].forEach(id => $(id).addEventListener('input', schedule));
   $('showOverlay').addEventListener('change', draw);
+  $('split').addEventListener('change', () => { $('splitStrength').disabled = !$('split').checked; run(); });
   $('clearManual').addEventListener('click', () => { excluded = []; run(); });
   $('zoomIn').addEventListener('click', () => setZoom(zoom * 1.25));
   $('zoomOut').addEventListener('click', () => setZoom(zoom / 1.25));
