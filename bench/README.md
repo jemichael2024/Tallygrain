@@ -11,8 +11,8 @@ Scripts that score `js/analysis.js` against outside images with a known answer. 
 git clone --depth 1 https://github.com/ArdaGen/STEM-Automated-Nanoparticle-Analysis-YOLOv8-SAM /tmp/ardagen
 git clone --depth 1 https://github.com/pulcovamon/Nanoparticles_app /tmp/aunp
 pip install pillow numpy
-python3 bench/prep_ardagen.py /tmp/ardagen /tmp/bench_ard && node bench/eval_ardagen.js /tmp/bench_ard
-python3 bench/prep_aunp.py /tmp/aunp /tmp/bench_au && node bench/eval_aunp.js /tmp/bench_au
+python3 bench/prep_ardagen.py /tmp/ardagen /tmp/bench_ard && node bench/eval_ardagen.js /tmp/bench_ard --flatten
+python3 bench/prep_aunp.py /tmp/aunp /tmp/bench_au && node bench/eval_aunp.js /tmp/bench_au --flatten
 ```
 
-Results and interpretation: [docs/accuracy.md](../docs/accuracy.md).
+Drop `--flatten` to reproduce the earlier numbers. Results and interpretation: [docs/accuracy.md](../docs/accuracy.md).

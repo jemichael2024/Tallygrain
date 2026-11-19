@@ -1,5 +1,22 @@
 # Accuracy against images with a known answer (2026-11-19)
 
+## Update: background flattening
+
+Feret now subtracts a smooth background before thresholding (per-cell percentile, median + mean smoothed, bilinear interpolation). It is on by default. Same benchmarks, before → after:
+
+| Case | Before | After |
+|---|---|---|
+| 50 nm Au, uneven lighting (image 009) | 2,005 detections, D50 10.4 nm | **13 particles, D50 50.9 nm** |
+| 50 nm Au, uneven lighting (image 008) | 1,926 detections, D50 10.4 nm | **9 particles, D50 44.7 nm** |
+| 50 nm Au, all 8 images, median D50 | 46.1 nm | **49.4 nm** |
+| 20 nm Au, D50 | 19.4 / 18.2 nm | 19.3 / 18.3 nm (unchanged) |
+| Catalyst set recall | 31% | 41% |
+| Catalyst set precision | 2% | 2% (still fails: textured supports need a trained model) |
+| Repo samples (SiO₂, STEM NPs, synthetic) | | Unchanged within 1 nm |
+
+Results below are the earlier run without flattening.
+
+
 Settings for every run: Otsu threshold, watershed splitting on (strength 1.0), min. area 20 px (4 px for the catalyst set), cluster above aspect ratio 1.5 or below solidity 0.85. Scripts and sources: [bench/](../bench/README.md).
 
 ## 1. Commercial gold nanoparticles, TEM bright field (closest to a typical lab report)
@@ -29,5 +46,5 @@ Source: [ArdaGen/STEM-Automated-Nanoparticle-Analysis-YOLOv8-SAM](https://github
 ## What this means
 
 - On clean, dispersed TEM samples (the common lab-report case) Feret already lands within a few percent of the known size.
-- Next fixes in order of payoff: **background flattening** (fixes the uneven-illumination failure), a **size filter or two-population view** (bimodal grids), and an **ML segmentation model** for particles on supports.
+- Next fixes in order of payoff: ~~background flattening~~ (done, see top), a **size filter or two-population view** (bimodal grids), and an **ML segmentation model** for particles on supports.
 - Caveat: nominal sizes are the supplier's figure, not a per-particle measurement, and the 20 nm and clean 50 nm sets are only 7 images. Treat these as early evidence, not a validation.

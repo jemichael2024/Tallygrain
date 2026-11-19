@@ -24,12 +24,13 @@ The app has a settings sidebar (scale, polarity, threshold, filters), a zoomable
 ## How the prototype measures
 
 1. Convert to grayscale and apply a 3x3 box blur.
-2. Pick a global threshold with Otsu's method.
-3. Label connected regions (8-connectivity).
-4. Drop specks below a minimum area and regions cut by the image edge.
-5. Split touching particles with a distance-transform watershed (images under 512 px wide are upsampled up to 4x first).
-6. Flag likely clusters and exclude them: aspect ratio above 1.5, or solidity (area ÷ convex-hull area) below 0.85 for regions of at least 100 px.
-7. Report the equivalent circular diameter of each remaining region:
+2. Flatten the background: estimate a smooth background map from per-cell percentiles and subtract it, so uneven lighting does not fool the threshold.
+3. Pick a global threshold with Otsu's method.
+4. Label connected regions (8-connectivity).
+5. Drop specks below a minimum area and regions cut by the image edge.
+6. Split touching particles with a distance-transform watershed (images under 512 px wide are upsampled up to 4x first).
+7. Flag likely clusters and exclude them: aspect ratio above 1.5, or solidity (area ÷ convex-hull area) below 0.85 for regions of at least 100 px.
+8. Report the equivalent circular diameter of each remaining region:
 
 $$
 d_{\text{eq}} = 2\sqrt{\frac{A}{\pi}} \cdot s
@@ -42,7 +43,7 @@ On the synthetic pattern it measures within about 2% of the true mean. Results o
 ## Known limits
 
 - Touching particles are split by watershed, but bright overlapping multilayers and densely packed grains (e.g. sintered cathodes) still fail.
-- One global threshold struggles with low-contrast TEM images and uneven backgrounds.
+- Background flattening handles slow brightness gradients, but particles on a textured support (e.g. catalysts) still need a trained model.
 - Equivalent circular diameter suits near-spherical particles only. Rods and plates need length and width.
 - Tested on four open-licence micrographs; touching particles are the dominant failure ([details](docs/test-results.md)).
 
@@ -67,7 +68,7 @@ bench/                benchmark scripts
 - [ ] Test on our own micrographs
 - [x] Split touching particles (watershed)
 - [x] Measure accuracy against images with known answers ([bench/](bench/README.md))
-- [ ] Background flattening for uneven illumination
+- [x] Background flattening for uneven illumination
 - [ ] Size filter / two-population view for bimodal samples
 - [ ] Read the scale bar automatically
 - [ ] Batch mode: many images in, one combined distribution out

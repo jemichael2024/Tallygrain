@@ -134,6 +134,8 @@
       solidityMin: Math.max(0, Math.min(1, +$('solid').value || 0)),
       cropPct: +$('crop').value || 0,
       threshold: $('autoThr').checked ? null : +$('thr').value,
+      flatten: $('flatten').checked,
+      bgCell: Math.max(0, +$('bgCell').value || 0) * scaleFactor,
       split: $('split').checked,
       splitStrength: Math.max(0.3, Math.min(2, +$('splitStrength').value || 1)),
       excluded
@@ -226,6 +228,7 @@
     const parts = [
       Math.round(src.width / scaleFactor) + '×' + Math.round(src.height / scaleFactor) + ' px',
       (isFinite(s) ? (s * scaleFactor).toFixed(3) + ' nm/px' : 'no scale'),
+      ($('flatten').checked ? 'flattened (' + Math.round((+$('bgCell').value || A.autoBgCell(src.width, result.hEff) / scaleFactor)) + ' px cells)' : 'no flattening'),
       'threshold ' + result.threshold + ($('autoThr').checked ? ' (Otsu)' : ' (manual)'),
       result.comps.length + ' regions' + (result.splitCount ? ' (' + result.splitCount + ' from splits)' : ''),
       (scaleFactor > 1 ? 'upsampled ×' + scaleFactor.toFixed(2) : scaleFactor < 1 ? 'downsampled ×' + scaleFactor.toFixed(2) : 'native'),
@@ -309,8 +312,9 @@
   $('polarity').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setPolarity(b.dataset.v === 'bright'); run(); });
   $('autoThr').addEventListener('change', () => { $('thr').disabled = $('autoThr').checked; run(); });
   $('thr').addEventListener('input', () => { $('thrVal').textContent = $('thr').value; schedule(); });
-  ['barNm', 'barPx', 'minArea', 'elong', 'solid', 'crop', 'splitStrength'].forEach(id => $(id).addEventListener('input', schedule));
+  ['barNm', 'barPx', 'minArea', 'elong', 'solid', 'crop', 'splitStrength', 'bgCell'].forEach(id => $(id).addEventListener('input', schedule));
   $('showOverlay').addEventListener('change', draw);
+  $('flatten').addEventListener('change', () => { $('bgCell').disabled = !$('flatten').checked; run(); });
   $('split').addEventListener('change', () => { $('splitStrength').disabled = !$('split').checked; run(); });
   $('clearManual').addEventListener('click', () => { excluded = []; run(); });
   $('zoomIn').addEventListener('click', () => setZoom(zoom * 1.25));

@@ -31,6 +31,54 @@
     return out;
   }
 
+  function autoBgCell(w, hEff) { return Math.max(24, Math.round(Math.min(w, hEff) / 10)); }
+
+  /* Background flattening. Split the image into cells, estimate the background level in each from a
+     percentile of its pixels (the dark end when particles are bright, the bright end when they are dark,
+     so particles inside a cell barely move it), smooth that coarse map with a 3x3 median then a 3x3 mean,
+     interpolate it back to full size, and subtract it. Removes slow brightness gradients (uneven
+     illumination, thickness changes in the support film) that defeat a single global threshold. */
+  function flattenBackground(img, w, h, hEff, cell, bright) {
+    cell = Math.max(8, Math.round(cell));
+    const gx = Math.ceil(w / cell), gy = Math.ceil(hEff / cell), grid = new Float64Array(gx * gy);
+    const pct = bright ? 0.2 : 0.8, step = Math.max(1, Math.floor(cell / 24));
+    const vals = [];
+    for (let j = 0; j < gy; j++) {
+      for (let i = 0; i < gx; i++) {
+        vals.length = 0;
+        const x0 = i * cell, y0 = j * cell, x1 = Math.min(w, x0 + cell), y1 = Math.min(hEff, y0 + cell);
+        for (let y = y0; y < y1; y += step) for (let x = x0; x < x1; x += step) vals.push(img[y * w + x]);
+        vals.sort((a, b) => a - b);
+        grid[j * gx + i] = vals[Math.min(vals.length - 1, Math.floor(pct * (vals.length - 1)))];
+      }
+    }
+    const smooth = (src, med) => {
+      const out = new Float64Array(src.length), nb = [];
+      for (let j = 0; j < gy; j++) for (let i = 0; i < gx; i++) {
+        nb.length = 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          const ii = i + di, jj = j + dj; if (ii >= 0 && jj >= 0 && ii < gx && jj < gy) nb.push(src[jj * gx + ii]);
+        }
+        if (med) { nb.sort((a, b) => a - b); out[j * gx + i] = nb[nb.length >> 1]; }
+        else out[j * gx + i] = nb.reduce((a, b) => a + b, 0) / nb.length;
+      }
+      return out;
+    };
+    const bg = smooth(smooth(grid, true), false);
+    let mean = 0; for (const v of bg) mean += v; mean /= bg.length;
+    const out = new Float32Array(img.length);
+    out.set(img);
+    for (let y = 0; y < hEff; y++) {
+      const fy = Math.min(gy - 1, Math.max(0, (y + 0.5) / cell - 0.5)), j0 = Math.floor(fy), j1 = Math.min(gy - 1, j0 + 1), ty = fy - j0;
+      for (let x = 0; x < w; x++) {
+        const fx = Math.min(gx - 1, Math.max(0, (x + 0.5) / cell - 0.5)), i0 = Math.floor(fx), i1 = Math.min(gx - 1, i0 + 1), tx = fx - i0;
+        const b = (bg[j0 * gx + i0] * (1 - tx) + bg[j0 * gx + i1] * tx) * (1 - ty) + (bg[j1 * gx + i0] * (1 - tx) + bg[j1 * gx + i1] * tx) * ty;
+        out[y * w + x] = img[y * w + x] - b + mean;
+      }
+    }
+    return out;
+  }
+
   // Otsu's method: threshold that maximises between-class variance.
   function otsu(img, count) {
     const hist = new Float64Array(256);
@@ -186,7 +234,8 @@
   /**
    * rgba: Uint8ClampedArray (w*h*4). Options:
    *  nmPerPx, bright (bool), minArea (px), elongMax, solidityMin, cropPct (bottom strip ignored),
-   *  threshold (0-255, or null for Otsu), split (bool), splitStrength (~0.5-1.5, higher splits less),
+   *  threshold (0-255, or null for Otsu), flatten (bool), bgCell (px, background cell size; auto if 0),
+   *  split (bool), splitStrength (~0.5-1.5, higher splits less),
    *  excluded: [{x,y}] points the user clicked to exclude.
    */
   function analyze(rgba, w, h, o) {
@@ -195,10 +244,11 @@
     const crop = Math.max(0, Math.min(40, o.cropPct || 0));
     const hEff = Math.max(1, Math.floor(h * (1 - crop / 100)));
     const nEff = w * hEff;
-    const bl = blur3(toGray(rgba, n), w, h);
+    const bright = o.bright !== false;
+    let bl = blur3(toGray(rgba, n), w, h);
+    if (o.flatten) bl = flattenBackground(bl, w, h, hEff, o.bgCell || autoBgCell(w, hEff), bright);
     const autoThr = otsu(bl, nEff);
     const thr = (o.threshold == null) ? autoThr : o.threshold;
-    const bright = o.bright !== false;
 
     const mask = new Uint8Array(n);
     let fg = 0;
@@ -280,7 +330,7 @@
     };
   }
 
-  const api = { analyze, summarize, percentile, otsu };
+  const api = { analyze, summarize, percentile, otsu, autoBgCell };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.FeretAnalysis = api;
 })(typeof window !== 'undefined' ? window : this);
