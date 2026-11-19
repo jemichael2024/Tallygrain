@@ -2,363 +2,123 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Feret Particle Sizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feret</title>
+<meta name="description" content="Nanoparticle sizing for SEM and TEM micrographs, in your browser.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<style>
-/* Layout: instrument-panel landing page. Hero text, then the live sizer (micrograph + readout) as the centrepiece, then short evidence/roadmap sections. */
-:root{
-  --bg:#eef0f2; --surface:#ffffff; --ink:#14181d; --muted:#5b6470; --line:#d5d9de;
-  --accent:#1f5fd1; --mark:#d99500; --warn:#d4462c; --faint:#9aa3ad; --chip:#e2e8f3;
-  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
-  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0f1216; --surface:#171b21; --ink:#e6e9ed; --muted:#98a1ad; --line:#2a3038;
-  --accent:#7aa5ff; --mark:#f2b738; --warn:#ff7a5c; --faint:#5d6672; --chip:#1e2a3d; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0f1216; --surface:#171b21; --ink:#e6e9ed; --muted:#98a1ad; --line:#2a3038;
-  --accent:#7aa5ff; --mark:#f2b738; --warn:#ff7a5c; --faint:#5d6672; --chip:#1e2a3d; color-scheme:dark}
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55}
-.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-a{color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:18px;flex-wrap:wrap}
-.brand{font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:.01em;display:flex;align-items:center;gap:10px}
-.brand svg{width:26px;height:26px}
-.chip{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--chip);color:var(--accent);padding:3px 8px;border-radius:4px}
-nav{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}
-nav a{color:var(--muted);text-decoration:none}
-nav a:hover{color:var(--ink)}
-.hero .wrap{padding-block:28px 20px}
-h1{font-family:var(--f-display);font-weight:800;font-size:clamp(32px,5.2vw,56px);line-height:1.05;letter-spacing:-.015em;margin:0 0 14px;max-width:16ch;text-wrap:balance}
-.lede{font-size:18px;color:var(--muted);max-width:60ch;margin:0}
-h2{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3vw,32px);letter-spacing:-.01em;margin:0 0 12px;text-wrap:balance}
-h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0 0 6px}
-.label{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-
-/* Tool */
-.tool{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-block:8px 40px}
-.scope{background:#0b0b0b;display:flex;flex-direction:column;min-width:0}
-.scope canvas{width:100%;height:auto;display:block;image-rendering:auto}
-.databar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-family:var(--f-mono);font-size:11px;color:#cfd3d8;background:#000;padding:7px 12px;border-top:1px solid #222}
-.databar .sb{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-left:auto}
-.databar .bar{height:4px;background:#fff}
-.panel{padding:18px;display:flex;flex-direction:column;gap:16px;min-width:0;border-left:1px solid var(--line)}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.field label{font-size:12px;color:var(--muted)}
-.field input,.field select{font:inherit;font-size:14px;font-family:var(--f-mono);padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-button,.filebtn{font:inherit;font-size:14px;font-weight:600;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
-button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
-button:hover,.filebtn:hover{border-color:var(--accent)}
-.filebtn input{display:none}
-.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.stat{background:var(--surface);padding:10px 12px}
-.stat b{display:block;font-family:var(--f-mono);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.stat span{font-size:11px;color:var(--muted)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-#hist{width:100%;height:150px;display:block}
-.note{font-size:12px;color:var(--muted);margin:0}
-.truth{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
-
-/* Sections */
-section .wrap{padding-block:36px}
-.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start}
-.figure{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline;border-top:1px solid var(--line);padding-top:16px}
-.figure .n{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
-.figure p{margin:0}
-.src{font-size:12px;color:var(--muted)}
-.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;counter-reset:s}
-.step{border-top:2px solid var(--ink);padding-top:12px}
-.step .label{display:block;margin-bottom:6px}
-.step p{margin:0;color:var(--muted)}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:12px;font-weight:600;color:var(--muted)}
-.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-.pill{font-family:var(--f-mono);font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
-.pill.now{border-color:var(--accent);color:var(--accent)}
-ul.plain{margin:0;padding-left:18px;color:var(--muted)}
-ul.plain li{margin-bottom:6px}
-form.wait{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-form.wait input{flex:1 1 220px;font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);min-width:0}
-#waitmsg{font-size:14px;color:var(--muted);margin-top:8px}
-footer .wrap{padding-block:28px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
-
-@media (max-width:880px){
-  .tool{grid-template-columns:1fr}
-  .panel{border-left:0;border-top:1px solid var(--line)}
-  .split{grid-template-columns:1fr;gap:28px}
-  .steps{grid-template-columns:1fr}
-}
-@media (max-width:420px){.controls{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+<div class="app" id="app">
 
-<header><div class="wrap">
-  <div class="brand">
-    <svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="var(--ink)" stroke-width="2"/><line x1="4" y1="18" x2="22" y2="8" stroke="var(--accent)" stroke-width="2.4"/></svg>
-    Feret <span class="chip">Prototype</span>
-  </div>
-  <nav><a href="#try">Try it</a><a href="#why">Why</a><a href="#roadmap">Roadmap</a><a href="#waitlist">Waitlist</a></nav>
-</div></header>
+  <header class="topbar">
+    <a class="brand" href="about.html" title="About Feret">
+      <svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10.5" fill="none" stroke="currentColor" stroke-width="2"/><line x1="4.5" y1="17.5" x2="21.5" y2="8.5" stroke="var(--accent)" stroke-width="2.4"/></svg>
+      Feret
+    </a>
+    <div class="tb-group">
+      <label class="btn" for="file">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10M5.5 7.5 10 3l4.5 4.5M4 15.5h12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Open image
+      </label>
+      <input type="file" id="file" accept="image/*" hidden>
+      <select id="sample" class="select" aria-label="Load a sample image"></select>
+    </div>
+    <div class="tb-file" id="filename">–</div>
+    <div class="tb-group right">
+      <button class="btn" id="exportCsv" type="button">Export CSV</button>
+      <button class="btn" id="exportPng" type="button">Export histogram</button>
+    </div>
+  </header>
 
-<div class="hero"><div class="wrap">
-  <div class="label" style="margin-bottom:10px">Particle sizing for SEM &amp; TEM</div>
-  <h1>Size 200 nanoparticles before your coffee cools.</h1>
-  <p class="lede">Drop in a micrograph, set the scale bar, and get a size distribution, D10/D50/D90 and a clean histogram. No clicking edges one by one in ImageJ.</p>
-</div></div>
+  <aside class="sidebar" aria-label="Settings">
+    <section class="group">
+      <h2>Scale</h2>
+      <div class="pair">
+        <div class="field"><label for="barNm">Scale bar (nm)</label><input id="barNm" type="number" min="0" step="any" value="200"></div>
+        <div class="field"><label for="barPx">Scale bar (px)</label><input id="barPx" type="number" min="0" step="any" value="80"></div>
+      </div>
+      <div class="readout"><span>Calibration</span><b id="nmpx">2.500 nm/px</b></div>
+      <p class="hint">Measure the bar length in pixels in the original image. For calibrated TEM files, enter the pixel size as nm per 1 px.</p>
+    </section>
 
-<div class="wrap" id="try">
-  <div class="tool">
-    <div class="scope">
-      <canvas id="view" width="512" height="384" aria-label="Micrograph with detected particles outlined"></canvas>
-      <div class="databar" id="databar">
-        <span>SE</span><span>5.0 kV</span><span>WD 4.1 mm</span><span>×80,000</span><span id="srcname">synthetic sample</span>
-        <div class="sb"><div class="bar" id="sbbar" style="width:80px"></div><span id="sblabel">200 nm</span></div>
+    <section class="group">
+      <h2>Detection</h2>
+      <div class="field"><label for="polarity">Particles appear</label>
+        <div class="seg" role="radiogroup" id="polarity">
+          <button type="button" role="radio" aria-checked="true" data-v="bright">Bright</button>
+          <button type="button" role="radio" aria-checked="false" data-v="dark">Dark</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="row-between"><label for="thr">Threshold</label><label class="check"><input type="checkbox" id="autoThr" checked> Auto (Otsu)</label></div>
+        <div class="slider"><input id="thr" type="range" min="1" max="254" value="128" disabled><output id="thrVal">128</output></div>
+      </div>
+      <div class="pair">
+        <div class="field"><label for="minArea">Min. area (px²)</label><input id="minArea" type="number" min="1" step="1" value="40"></div>
+        <div class="field"><label for="elong">Cluster above AR</label><input id="elong" type="number" min="1.05" step="0.05" value="1.5"></div>
+      </div>
+      <div class="pair">
+        <div class="field"><label for="solid">Cluster below solidity</label><input id="solid" type="number" min="0" max="1" step="0.01" value="0.85"></div>
+        <div class="field"><label for="crop">Ignore bottom (%)</label><input id="crop" type="number" min="0" max="40" step="1" value="0"></div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>Edits</h2>
+      <p class="hint">Click a particle in the image to exclude it, click again to bring it back.</p>
+      <div class="readout"><span>Excluded by hand</span><b id="manualCount">0</b></div>
+      <button class="btn small" id="clearManual" type="button">Clear exclusions</button>
+    </section>
+  </aside>
+
+  <main class="viewer" aria-label="Image">
+    <div class="viewer-tools">
+      <div class="legend">
+        <span><i class="sw ok"></i>Measured</span>
+        <span><i class="sw cluster"></i>Cluster</span>
+        <span><i class="sw edge"></i>Edge</span>
+        <span><i class="sw manual"></i>Excluded</span>
+      </div>
+      <div class="zoom">
+        <label class="check"><input type="checkbox" id="showOverlay" checked> Outlines</label>
+        <button class="btn icon" id="zoomOut" type="button" aria-label="Zoom out">−</button>
+        <button class="btn icon wide" id="zoomFit" type="button">Fit</button>
+        <button class="btn icon" id="zoomIn" type="button" aria-label="Zoom in">+</button>
       </div>
     </div>
-    <div class="panel">
-      <div class="row">
-        <label class="filebtn">Upload micrograph<input type="file" id="file" accept="image/*"></label>
-        <button id="newsample" type="button">New sample</button>
-      </div>
-      <div class="controls">
-        <div class="field"><label for="barnm">Scale bar length (nm)</label><input id="barnm" type="number" min="0.1" step="any" value="200"></div>
-        <div class="field"><label for="barpx">Scale bar length (px, original image)</label><input id="barpx" type="number" min="1" step="any" value="80"></div>
-        <div class="field"><label for="polarity">Particles are</label><select id="polarity"><option value="bright">Bright on dark</option><option value="dark">Dark on bright</option></select></div>
-        <div class="field"><label for="minarea">Ignore specks under (px²)</label><input id="minarea" type="number" min="1" step="1" value="40"></div>
-        <div class="field"><label for="crop">Ignore bottom strip (%)</label><input id="crop" type="number" min="0" max="40" step="1" value="0"></div>
-        <div class="field"><label for="elong">Flag as cluster above aspect ratio</label><input id="elong" type="number" min="1.1" step="0.1" value="1.5"></div>
-      </div>
-      <div class="row"><button class="primary" id="run" type="button">Measure particles</button><button id="copy" type="button">Copy CSV</button></div>
+    <div class="stage" id="stage">
+      <canvas id="view" width="512" height="384"></canvas>
+      <div class="tip" id="tip" hidden></div>
+      <div class="drop" id="drop" hidden>Drop image to analyse</div>
+    </div>
+  </main>
+
+  <aside class="results" aria-label="Results">
+    <section class="group">
+      <h2>Size distribution</h2>
       <div class="stats" id="stats"></div>
-      <div class="legend"><span><i style="background:var(--mark)"></i>Measured</span><span><i style="background:var(--warn)"></i>Likely cluster (excluded)</span><span><i style="background:var(--faint)"></i>Cut by edge (excluded)</span></div>
-      <div>
-        <div class="label" style="margin-bottom:6px">Equivalent circular diameter</div>
-        <canvas id="hist" aria-label="Histogram of particle diameters"></canvas>
+    </section>
+    <section class="group">
+      <div class="row-between"><h2>Equivalent diameter</h2><span class="hint mono" id="binInfo"></span></div>
+      <canvas id="hist" height="170"></canvas>
+    </section>
+    <section class="group grow">
+      <h2>Particles</h2>
+      <div class="table-wrap">
+        <table id="table">
+          <thead><tr><th>#</th><th>d (nm)</th><th>Area (nm²)</th><th>AR</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
-      <p class="truth" id="truth"></p>
-      <p class="note">Runs entirely in your browser. Nothing is uploaded. Prototype uses Otsu thresholding, so touching particles are flagged, not split.</p>
-    </div>
-  </div>
+    </section>
+  </aside>
+
+  <footer class="statusbar" id="status">Ready</footer>
 </div>
 
-<section id="why"><div class="wrap split">
-  <div>
-    <h2>Particle sizing is still done by hand, and it shows.</h2>
-    <p style="color:var(--muted);margin:0">Every nanomaterials lab report, thesis chapter and paper needs a size distribution. The usual route is FIJI: draw a line across each particle, record it, repeat a few hundred times. Free automated options exist, but they take tuning that most people never get around to.</p>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:20px">
-    <div class="figure"><span class="n">200</span><p>particles is the rule-of-thumb minimum for a statistically meaningful size estimate. An experienced researcher sizes about that many by hand in an hour.</p></div>
-    <div class="figure"><span class="n">≈40</span><p>samples per work week is the ceiling for manual sizing at that pace, and two people measuring the same image by hand will almost certainly get different results.</p></div>
-    <p class="src">Source: Aviles &amp; Lear, <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12186846/" target="_blank" rel="noopener">“Practical Guide to Automated TEM Image Analysis…”</a>, ACS Nanoscience Au, 2025.</p>
-  </div>
-</div></section>
-
-<section><div class="wrap">
-  <h2>How it works</h2>
-  <div class="steps">
-    <div class="step"><span class="label">Step 1</span><h3>Drop the image</h3><p>Any SEM or TEM export: TIFF, PNG or JPG. Crop off the instrument data bar with one setting.</p></div>
-    <div class="step"><span class="label">Step 2</span><h3>Set the scale</h3><p>Type the scale bar length in nm and in pixels. Planned: read the bar automatically.</p></div>
-    <div class="step"><span class="label">Step 3</span><h3>Check and export</h3><p>Every particle is outlined so you can see what was counted. Copy the CSV or the histogram straight into your report.</p></div>
-  </div>
-</div></section>
-
-<section id="roadmap"><div class="wrap">
-  <h2>Roadmap</h2>
-  <div class="tablebox"><table>
-    <thead><tr><th>Feature</th><th>What it does</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>Threshold sizer</td><td>Otsu segmentation, equivalent diameter, D10/D50/D90, cluster flagging</td><td><span class="pill now">In this demo</span></td></tr>
-      <tr><td>Split touching particles</td><td>Watershed or a trained segmentation model so clusters are measured, not dropped</td><td><span class="pill">Next</span></td></tr>
-      <tr><td>Auto scale bar</td><td>Reads the bar and its label from the image</td><td><span class="pill">Next</span></td></tr>
-      <tr><td>Batch mode</td><td>Fifty images in, one combined distribution and per-image table out</td><td><span class="pill">Planned</span></td></tr>
-      <tr><td>Snap overlay</td><td>Desktop hotkey that sizes whatever micrograph is on screen, in any viewer</td><td><span class="pill">Exploring</span></td></tr>
-      <tr><td>Report figure</td><td>Histogram with log-normal fit and a methods sentence you can cite</td><td><span class="pill">Exploring</span></td></tr>
-    </tbody>
-  </table></div>
-</div></section>
-
-<section id="waitlist"><div class="wrap split">
-  <div>
-    <h2>Known limits, stated up front</h2>
-    <ul class="plain">
-      <li>Touching or overlapping particles are flagged and excluded, which biases counts on dense samples.</li>
-      <li>Low-contrast TEM images or uneven backgrounds can fool a single global threshold.</li>
-      <li>Equivalent circular diameter suits near-spherical particles. Rods and plates need length and width, which is not built yet.</li>
-    </ul>
-  </div>
-  <div>
-    <h2>Want it for your next lab report?</h2>
-    <p style="color:var(--muted);margin:0">Tell us what you image and how you size particles today.</p>
-    <form class="wait" id="waitform">
-      <input id="waitemail" type="email" placeholder="you@university.ca" required aria-label="Email">
-      <button class="primary" type="submit">Join waitlist</button>
-    </form>
-    <p id="waitmsg" hidden>Thanks. This prototype does not store sign-ups yet, so nothing was saved.</p>
-  </div>
-</div></section>
-
-<footer><div class="wrap">Feret is a working name for a student prototype. Sample image is synthetic; no instrument data is shown.</div></footer>
-
-<script>
-(function(){
-const view=document.getElementById('view'), vctx=view.getContext('2d',{willReadFrequently:true});
-const src=document.createElement('canvas'), sctx=src.getContext('2d',{willReadFrequently:true});
-const $=id=>document.getElementById(id);
-let truth=null, scaleFactor=1, lastRows=[], seed=7;
-
-function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function gauss(r){let u=0;while(!u)u=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r())}
-
-function makeSample(s){
-  const W=512,H=384;src.width=W;src.height=H;const r=rng(s),g=sctx;
-  const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#323232');bg.addColorStop(1,'#262626');
-  g.fillStyle=bg;g.fillRect(0,0,W,H);
-  const parts=[];let tries=0;
-  while(parts.length<75&&tries<6000){tries++;
-    const rad=Math.exp(Math.log(13)+0.22*gauss(r));
-    const x=r()*W,y=r()*H, k=r()<0.06?0.85:1.08;
-    if(parts.some(p=>Math.hypot(p.x-x,p.y-y)<(p.r+rad)*k))continue;
-    parts.push({x,y,r:rad});}
-  for(const p of parts){
-    const gr=g.createRadialGradient(p.x-p.r*.25,p.y-p.r*.3,p.r*.1,p.x,p.y,p.r);
-    gr.addColorStop(0,'#d2d2d2');gr.addColorStop(.72,'#b0b0b0');gr.addColorStop(.92,'#ececec');gr.addColorStop(1,'rgba(200,200,200,0.15)');
-    g.fillStyle=gr;g.beginPath();g.arc(p.x,p.y,p.r,0,Math.PI*2);g.fill();}
-  const im=g.getImageData(0,0,W,H),d=im.data;
-  for(let i=0;i<d.length;i+=4){const v=Math.max(0,Math.min(255,d[i]+gauss(r)*16));d[i]=d[i+1]=d[i+2]=v;}
-  g.putImageData(im,0,0);
-  // truth: particles fully inside frame, diameter in nm at 2.5 nm/px
-  const inside=parts.filter(p=>p.x-p.r>1&&p.y-p.r>1&&p.x+p.r<W-1&&p.y+p.r<H-1).map(p=>p.r*2*2.5);
-  truth={mean:inside.reduce((a,b)=>a+b,0)/inside.length,n:inside.length};
-  scaleFactor=1;$('barnm').value=200;$('barpx').value=80;$('crop').value=0;$('polarity').value='bright';
-  $('srcname').textContent='synthetic sample';
-}
-
-function percentile(a,p){if(!a.length)return NaN;const i=(a.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return a[lo]+(a[hi]-a[lo])*(i-lo)}
-
-function analyze(){
-  const w=src.width,h=src.height,d=sctx.getImageData(0,0,w,h).data;
-  const crop=Math.max(0,Math.min(40,+$('crop').value||0)), hEff=Math.floor(h*(1-crop/100));
-  const barNm=+$('barnm').value, barPx=+$('barpx').value;
-  const nmPerPx=(barNm>0&&barPx>0)?(barNm/barPx)/scaleFactor:1;
-  const bright=$('polarity').value==='bright', minArea=Math.max(1,+$('minarea').value||1), elongMax=Math.max(1.05,+$('elong').value||1.5);
-  const N=w*h, gray=new Float32Array(N), bl=new Float32Array(N);
-  for(let i=0;i<N;i++)gray[i]=.299*d[4*i]+.587*d[4*i+1]+.114*d[4*i+2];
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0,c=0;
-    for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w)continue;s+=gray[yy*w+xx];c++;}}
-    bl[y*w+x]=s/c;}
-  // Otsu threshold over analysed region
-  const hist=new Float64Array(256);let tot=0;
-  for(let i=0;i<w*hEff;i++){hist[Math.min(255,Math.round(bl[i]))]++;tot++;}
-  let sum=0;for(let t=0;t<256;t++)sum+=t*hist[t];
-  let sB=0,wB=0,best=0,thr=128;
-  for(let t=0;t<256;t++){wB+=hist[t];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=t*hist[t];
-    const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>best){best=v;thr=t;}}
-  const mask=new Uint8Array(N);
-  for(let i=0;i<w*hEff;i++)mask[i]=bright?(bl[i]>thr):(bl[i]<thr);
-  // Connected components, 8-connectivity
-  const lab=new Int32Array(N), comps=[], stack=new Int32Array(N);
-  for(let i=0;i<w*hEff;i++){if(!mask[i]||lab[i])continue;
-    const id=comps.length+1;let sp=0;stack[sp++]=i;lab[i]=id;
-    let a=0,sx=0,sy=0,sxx=0,syy=0,sxy=0,edge=false;
-    while(sp){const p=stack[--sp],x=p%w,y=(p-x)/w;
-      a++;sx+=x;sy+=y;sxx+=x*x;syy+=y*y;sxy+=x*y;
-      if(x===0||y===0||x===w-1||y===hEff-1)edge=true;
-      for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=hEff)continue;
-        for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w)continue;const q=yy*w+xx;
-          if(mask[q]&&!lab[q]){lab[q]=id;stack[sp++]=q;}}}}
-    const mx=sx/a,my=sy/a,cxx=sxx/a-mx*mx,cyy=syy/a-my*my,cxy=sxy/a-mx*my;
-    const tr=cxx+cyy,det=cxx*cyy-cxy*cxy,disc=Math.sqrt(Math.max(0,tr*tr/4-det));
-    const l1=tr/2+disc,l2=Math.max(1e-6,tr/2-disc),ar=Math.sqrt(l1/l2);
-    let cls='ok';if(a<minArea)cls='small';else if(edge)cls='edge';else if(ar>elongMax)cls='cluster';
-    comps.push({a,mx,my,ar,cls});}
-  // Draw overlay
-  vctx.drawImage(src,0,0);
-  const out=vctx.getImageData(0,0,w,h),o=out.data,cs=getComputedStyle(document.documentElement);
-  const hex=v=>{v=v.trim().replace('#','');if(v.length===3)v=v.split('').map(c=>c+c).join('');return[parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)]};
-  const colors={ok:hex('#f2b738'),cluster:hex('#ff6a4d'),edge:hex('#8d97a3')};
-  for(let y=0;y<hEff;y++)for(let x=0;x<w;x++){const i=y*w+x,L=lab[i];if(!L)continue;const c=comps[L-1];if(c.cls==='small')continue;
-    const b=(x===0||lab[i-1]!==L)||(x===w-1||lab[i+1]!==L)||(y===0||lab[i-w]!==L)||(y===hEff-1||lab[i+w]!==L);
-    if(b){const col=colors[c.cls];o[4*i]=col[0];o[4*i+1]=col[1];o[4*i+2]=col[2];}}
-  if(crop>0){for(let i=w*hEff;i<N;i++){o[4*i]*=.35;o[4*i+1]*=.35;o[4*i+2]*=.35;}}
-  vctx.putImageData(out,0,0);
-  // Stats
-  const ok=comps.filter(c=>c.cls==='ok');
-  lastRows=ok.map((c,k)=>({id:k+1,d:2*Math.sqrt(c.a/Math.PI)*nmPerPx,area:c.a*nmPerPx*nmPerPx,x:c.mx/scaleFactor,y:c.my/scaleFactor}));
-  const ds=lastRows.map(r=>r.d).sort((a,b)=>a-b),n=ds.length;
-  const mean=n?ds.reduce((a,b)=>a+b,0)/n:NaN, sd=n>1?Math.sqrt(ds.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(n-1)):NaN;
-  const f=v=>isFinite(v)?v.toFixed(1):'–';
-  const cl=comps.filter(c=>c.cls==='cluster').length, ed=comps.filter(c=>c.cls==='edge').length;
-  $('stats').innerHTML=[
-    [n,'particles measured'],[f(mean)+' nm','mean diameter'],[f(sd)+' nm','std. deviation'],
-    [f(percentile(ds,.1)),'D10 (nm)'],[f(percentile(ds,.5)),'D50 (nm)'],[f(percentile(ds,.9)),'D90 (nm)'],
-    [isFinite(sd/mean)?(100*sd/mean).toFixed(0)+'%':'–','CV'],[cl,'clusters flagged'],[ed,'cut by edge']
-  ].map(([v,l])=>'<div class="stat"><b>'+v+'</b><span>'+l+'</span></div>').join('');
-  $('truth').textContent=truth?('Synthetic sample check: true mean of the '+truth.n+' fully visible particles is '+truth.mean.toFixed(1)+' nm.'):'';
-  drawHist(ds);
-}
-
-function drawHist(ds){
-  const c=$('hist'),dpr=window.devicePixelRatio||1,W=c.clientWidth||300,H=150;
-  c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
-  const cs=getComputedStyle(document.documentElement),ink=cs.getPropertyValue('--muted').trim(),acc=cs.getPropertyValue('--accent').trim(),line=cs.getPropertyValue('--line').trim();
-  g.font='11px "IBM Plex Mono", monospace';g.fillStyle=ink;
-  if(ds.length<2){g.fillText('Not enough particles to plot',8,20);return;}
-  const lo=Math.floor(ds[0]),hi=Math.ceil(ds[ds.length-1]),bins=Math.min(16,Math.max(6,Math.round(Math.sqrt(ds.length)))),bw=(hi-lo)/bins||1;
-  const cnt=new Array(bins).fill(0);ds.forEach(v=>cnt[Math.min(bins-1,Math.floor((v-lo)/bw))]++);
-  const max=Math.max(...cnt),pl=28,pr=8,pt=8,pb=22,iw=W-pl-pr,ih=H-pt-pb;
-  g.strokeStyle=line;g.lineWidth=1;
-  for(let k=0;k<=2;k++){const y=pt+ih-ih*k/2;g.beginPath();g.moveTo(pl,y+.5);g.lineTo(W-pr,y+.5);g.stroke();
-    g.fillStyle=ink;g.textAlign='right';g.fillText(String(Math.round(max*k/2)),pl-5,y+4);}
-  g.fillStyle=acc;
-  cnt.forEach((v,k)=>{const x=pl+iw*k/bins,bwpx=iw/bins,hgt=ih*v/max;g.fillRect(x+1,pt+ih-hgt,Math.max(1,bwpx-2),hgt);});
-  g.fillStyle=ink;g.textAlign='left';g.fillText(lo+' nm',pl,H-6);g.textAlign='right';g.fillText(hi+' nm',W-pr,H-6);
-}
-
-function updateScaleBar(){
-  const barPx=+$('barpx').value||0, frac=(barPx*scaleFactor)/src.width;
-  $('sbbar').style.width=Math.max(4,Math.min(1,frac)*view.clientWidth)+'px';
-  $('sblabel').textContent=(+$('barnm').value||0)+' nm';
-}
-
-function loadFile(file){
-  const img=new Image(),url=URL.createObjectURL(file);
-  img.onload=function(){const maxW=1024;scaleFactor=Math.min(1,maxW/img.naturalWidth);
-    src.width=Math.round(img.naturalWidth*scaleFactor);src.height=Math.round(img.naturalHeight*scaleFactor);
-    sctx.drawImage(img,0,0,src.width,src.height);view.width=src.width;view.height=src.height;
-    truth=null;$('srcname').textContent=file.name.slice(0,40);$('crop').value=10;URL.revokeObjectURL(url);run();};
-  img.onerror=function(){$('truth').textContent='That file could not be read as an image. Try PNG or JPG.';};
-  img.src=url;
-}
-
-function run(){analyze();updateScaleBar();}
-
-$('run').addEventListener('click',run);
-$('newsample').addEventListener('click',()=>{seed++;makeSample(seed);view.width=src.width;view.height=src.height;run();});
-$('file').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
-['barnm','barpx'].forEach(id=>$(id).addEventListener('input',updateScaleBar));
-$('copy').addEventListener('click',()=>{
-  const csv='id,diameter_nm,area_nm2,x_px,y_px\n'+lastRows.map(r=>[r.id,r.d.toFixed(2),r.area.toFixed(1),r.x.toFixed(1),r.y.toFixed(1)].join(',')).join('\n');
-  const b=$('copy');const done=t=>{b.textContent=t;setTimeout(()=>b.textContent='Copy CSV',1600)};
-  try{navigator.clipboard.writeText(csv).then(()=>done('Copied'),()=>done('Copy blocked'));}catch(e){done('Copy blocked');}
-});
-$('waitform').addEventListener('submit',e=>{e.preventDefault();$('waitmsg').hidden=false;});
-window.addEventListener('resize',()=>{updateScaleBar();drawHist(lastRows.map(r=>r.d).sort((a,b)=>a-b));});
-if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>drawHist(lastRows.map(r=>r.d).sort((a,b)=>a-b)));
-
-makeSample(seed);run();
-})();
-</script>
+<script src="js/analysis.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
