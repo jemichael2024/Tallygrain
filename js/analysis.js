@@ -1,5 +1,5 @@
-/* Feret analysis core: threshold segmentation + per-particle measurements.
-   Pure functions, no DOM. Works in the browser (window.FeretAnalysis) and in Node (module.exports). */
+/* Tallygrain analysis core: threshold segmentation + per-particle measurements.
+   Pure functions, no DOM. Works in the browser (window.TallygrainAnalysis) and in Node (module.exports). */
 (function (root) {
   'use strict';
 
@@ -332,5 +332,5 @@
 
   const api = { analyze, summarize, percentile, otsu, autoBgCell };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.FeretAnalysis = api;
+  else root.TallygrainAnalysis = api;
 })(typeof window !== 'undefined' ? window : this);

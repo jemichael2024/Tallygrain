@@ -1,6 +1,6 @@
 # Sample image credits
 
-These images are redistributed for testing. Each keeps its original licence. They are **not** covered by any licence Feret itself adopts.
+These images are redistributed for testing. Each keeps its original licence. They are **not** covered by any licence Tallygrain itself adopts.
 
 | File | Type | Scale used in the app | Source | Licence |
 |---|---|---|---|---|

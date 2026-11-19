@@ -1,7 +1,7 @@
-/* Feret app: UI wiring around FeretAnalysis. */
+/* Tallygrain app: UI wiring around TallygrainAnalysis. */
 (function () {
   'use strict';
-  const A = window.FeretAnalysis;
+  const A = window.TallygrainAnalysis;
   const $ = id => document.getElementById(id);
 
   // Sample images shipped in samples/ (see samples/CREDITS.md). Scale values are per image.
@@ -290,12 +290,12 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
-  const base = () => (name || 'feret').replace(/\.[^.]+$/, '');
+  const base = () => (name || 'tallygrain').replace(/\.[^.]+$/, '');
   $('exportCsv').addEventListener('click', () => {
     if (!result) return;
     const s = nmPerPx() * scaleFactor;
     const rows = result.comps.filter(c => c.cls === 'ok').map((c, k) => [k + 1, c.dNm.toFixed(2), c.areaNm2.toFixed(1), c.ar.toFixed(3), (c.cx / scaleFactor).toFixed(1), (c.cy / scaleFactor).toFixed(1)].join(','));
-    const head = '# Feret export, image: ' + name + ', scale: ' + s.toFixed(4) + ' nm/px, threshold: ' + result.threshold + '\n# n=' + summary.n + ', mean=' + fmt(summary.mean, 2) + ' nm, sd=' + fmt(summary.sd, 2) + ' nm, D10=' + fmt(summary.d10, 2) + ', D50=' + fmt(summary.d50, 2) + ', D90=' + fmt(summary.d90, 2) + '\n';
+    const head = '# Tallygrain export, image: ' + name + ', scale: ' + s.toFixed(4) + ' nm/px, threshold: ' + result.threshold + '\n# n=' + summary.n + ', mean=' + fmt(summary.mean, 2) + ' nm, sd=' + fmt(summary.sd, 2) + ' nm, D10=' + fmt(summary.d10, 2) + ', D50=' + fmt(summary.d50, 2) + ', D90=' + fmt(summary.d90, 2) + '\n';
     download(new Blob([head + 'id,diameter_nm,area_nm2,aspect_ratio,x_px,y_px\n' + rows.join('\n') + '\n'], { type: 'text/csv' }), base() + '_particles.csv');
   });
   $('exportPng').addEventListener('click', () => {

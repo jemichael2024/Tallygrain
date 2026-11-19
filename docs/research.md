@@ -6,7 +6,7 @@ Goal: an AI tool tied to a Nanotechnology Engineering degree that saves real tim
 
 | # | Concept | Who already does it | Verdict |
 |---|---|---|---|
-| 1 | Particle sizer (Feret) | Free: FIJI + Trainable Weka; [LLNL LIST](https://pls.llnl.gov/article/22441/using-machine-learning-techniques-extract-nanomaterial-information-sem-images) (open source); research models without released code ([Tao et al., RSC Adv. 2025](https://pubs.rsc.org/en/content/articlehtml/2025/ra/d5ra03210e)) | Buildable now. Gap is ease of use, not the method |
+| 1 | Particle sizer (Tallygrain) | Free: FIJI + Trainable Weka; [LLNL LIST](https://pls.llnl.gov/article/22441/using-machine-learning-techniques-extract-nanomaterial-information-sem-images) (open source); research models without released code ([Tao et al., RSC Adv. 2025](https://pubs.rsc.org/en/content/articlehtml/2025/ra/d5ra03210e)) | Buildable now. Gap is ease of use, not the method |
 | 2 | XRD/Raman/FTIR interpretation copilot | Rigaku [AI phase ID](https://rigaku.com/products/x-ray-diffraction-and-scattering/xrd/learning/ai-analysis/neural-network-application-phaseid) | Later feature. Good reference databases are licensed |
 | 3 | Lab-bench voice assistant | LabTwin (since 2019); [Benchling AI for Academics](https://help.benchling.com/hc/en-us/articles/47505104598541-Benchling-AI-for-Academics-Beta) | Crowded |
 | 4 | Screen copilot for MATLAB/Excel | [MATLAB Copilot](https://www.mathworks.com/company/newsroom/mathworks-launches-generative-ai-powered-matlab-copilot-to-boost-productivity-and-accelerate-development-for-engineers-scientists-and-researchers.html) (Oct 2025) | Avoid, vendors own it |

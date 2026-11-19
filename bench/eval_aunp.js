@@ -1,4 +1,4 @@
-// Score Feret against nominal sizes of commercial Au nanoparticles (TEM, dark particles).
+// Score Tallygrain against nominal sizes of commercial Au nanoparticles (TEM, dark particles).
 const A=require('../js/analysis.js'),fs=require('fs'),S=process.argv[2],flatten=process.argv.includes('--flatten');
 const meta=JSON.parse(fs.readFileSync(S+'/meta.json'));const groups={};
 for(const split of [false,true]){console.log(split?'\n### with splitting':'### threshold only');

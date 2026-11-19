@@ -1,8 +1,8 @@
-# Feret
+# Tallygrain
 
 Fast nanoparticle sizing for SEM and TEM micrographs. Drop in an image, set the scale bar, and get a size distribution (mean, SD, D10/D50/D90, CV) with every counted particle outlined so you can check the result.
 
-> Status: early prototype. "Feret" is a working name (named after the Feret diameter); the trademark has not been checked.
+> Status: early prototype. Earlier drafts used the working name "Feret". A quick check found no conflicts for "Tallygrain", but no formal trademark search has been done.
 
 ## Why
 

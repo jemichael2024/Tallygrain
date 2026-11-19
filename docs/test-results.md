@@ -2,7 +2,7 @@
 
 ## Update: watershed splitting
 
-Feret now splits touching particles with a distance-transform watershed (markers at distance peaks, flooded in order of decreasing distance), and upsamples images narrower than 512 px by up to 4x first. Same settings as below, split strength 1.0.
+Tallygrain now splits touching particles with a distance-transform watershed (markers at distance peaks, flooded in order of decreasing distance), and upsamples images narrower than 512 px by up to 4x first. Same settings as below, split strength 1.0.
 
 | Image | Measured before | Measured after | Mean d after | Notes |
 |---|---|---|---|---|
