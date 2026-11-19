@@ -37,7 +37,7 @@ $$
 
 where $A$ is the region area in pixels and $s$ is the scale in nm/px (scale bar length in nm divided by its length in px).
 
-On the synthetic pattern it measures within about 2% of the true mean. Results on real SEM/STEM images are in [docs/test-results.md](docs/test-results.md).
+On the synthetic pattern it measures within about 2% of the true mean. Results on real SEM/STEM images are in [docs/test-results.md](docs/test-results.md), and accuracy against images with a known answer is in [docs/accuracy.md](docs/accuracy.md) (within a few percent on clean commercial gold NP images; fails on catalyst supports).
 
 ## Known limits
 
@@ -57,6 +57,8 @@ js/app.js             UI: loading, viewer, results, export
 samples/              test micrographs + CREDITS.md
 docs/research.md      idea shortlist, competitors and sources
 docs/test-results.md  how it does on real images
+docs/accuracy.md      scored against known answers
+bench/                benchmark scripts
 ```
 
 ## Roadmap
@@ -64,7 +66,9 @@ docs/test-results.md  how it does on real images
 - [x] Test on real SEM/TEM images and record where it fails
 - [ ] Test on our own micrographs
 - [x] Split touching particles (watershed)
-- [ ] Measure accuracy against images with ground-truth masks
+- [x] Measure accuracy against images with known answers ([bench/](bench/README.md))
+- [ ] Background flattening for uneven illumination
+- [ ] Size filter / two-population view for bimodal samples
 - [ ] Read the scale bar automatically
 - [ ] Batch mode: many images in, one combined distribution out
 - [ ] Histogram export with log-normal fit
