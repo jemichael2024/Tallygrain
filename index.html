@@ -45,7 +45,9 @@
         <div class="field"><label for="barPx">Scale bar (px)</label><input id="barPx" type="number" min="0" step="any" value="80"></div>
       </div>
       <div class="readout"><span>Calibration</span><b id="nmpx">2.500 nm/px</b></div>
-      <p class="hint">Measure the bar length in pixels in the original image. For calibrated TEM files, enter the pixel size as nm per 1 px.</p>
+      <div class="row-between"><button class="btn small" id="detectScale" type="button">Detect scale bar</button><span class="hint" id="scaleBusy"></span></div>
+      <p class="hint" id="scaleAuto" hidden></p>
+      <p class="hint">Opened images are checked for a scale bar automatically; the bar found is outlined in cyan. Otherwise measure the bar length in pixels in the original image. For calibrated TEM files, enter the pixel size as nm per 1 px.</p>
     </section>
 
     <section class="group">
@@ -152,6 +154,7 @@
 </div>
 
 <script src="js/analysis.js"></script>
+<script src="js/scalebar.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

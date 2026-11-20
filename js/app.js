@@ -32,6 +32,7 @@
   // Two models: 'supported' (catalyst supports) and 'dispersed' (clean film). aiModel is 'auto' or one of them.
   const MODELS = { supported: 'models/tallygrain-unet.onnx', dispersed: 'models/tallygrain-unet-dispersed.onnx' };
   const sessions = {}; let aiModel = 'auto', probs = {}, choice = null;
+  let scaleBox = null, ocrWorker = null, scaleJob = 0;
 
   /* ---------- Synthetic sample ---------- */
   function rng(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -71,6 +72,7 @@
   }
 
   function afterLoad(label) {
+    scaleBox = null; scaleJob++; scaleMsg(''); $('scaleBusy').textContent = '';
     srcData = sctx.getImageData(0, 0, src.width, src.height);
     view.width = src.width; view.height = src.height;
     excluded = []; selected = 0; name = label; fitMode = true;
@@ -118,6 +120,7 @@
       $('sample').value = '';
       setSettings({ barNm: $('barNm').value, barPx: $('barPx').value, crop: 8, bright: bright, minArea: 20, elong: 1.5, method });  // keep the chosen method
       afterLoad(file.name);
+      detectScale();
     };
     img.onerror = () => status('The browser could not read ' + file.name + '. 16-bit TIFFs often fail; export as PNG first.');
     img.src = url;
@@ -127,6 +130,53 @@
   function nmPerPx() {
     const nm = parseFloat($('barNm').value), px = parseFloat($('barPx').value);
     return (nm > 0 && px > 0) ? (nm / px) / scaleFactor : NaN;
+  }
+
+  /* ---------- Scale bar: find the bar, read its label with OCR (tesseract.js, loaded on first use) ---------- */
+  async function ensureOcr() {
+    if (ocrWorker) return ocrWorker;
+    if (!window.Tesseract) await loadScript('vendor/tesseract/tesseract.min.js');
+    const base = new URL('vendor/tesseract/', location.href).href;
+    ocrWorker = await Tesseract.createWorker('eng', 1, { workerPath: base + 'worker.min.js', corePath: base, langPath: base + 'lang', gzip: true, cacheMethod: 'none' });
+    await ocrWorker.setParameters({ tessedit_pageseg_mode: '11' });  // sparse text
+    return ocrWorker;
+  }
+  function cropCanvas(c) {
+    const cv = document.createElement('canvas'); cv.width = c.width; cv.height = c.height;
+    cv.getContext('2d').putImageData(new ImageData(c.data, c.width, c.height), 0, 0); return cv;
+  }
+  function scaleMsg(t) { $('scaleAuto').hidden = !t; $('scaleAuto').textContent = t || ''; }
+  async function detectScale() {
+    if (!srcData) return;
+    const job = ++scaleJob, img = srcData, w = src.width, h = src.height;
+    const bar = TallygrainScalebar.findBar(img.data, w, h);
+    scaleBox = bar ? { bar, img } : null; draw();
+    if (!bar) { scaleMsg('No scale bar found. Enter the scale by hand.'); return; }
+    const barPxOrig = bar.len / scaleFactor;
+    $('scaleBusy').textContent = 'reading label…';
+    let best = null;
+    try {
+      const worker = await ensureOcr(), results = [];
+      for (const c of TallygrainScalebar.labelCrops(img.data, w, h, bar)) {
+        const r = (await worker.recognize(cropCanvas(c), {}, { text: true, blocks: true })).data;
+        if (job !== scaleJob) return;  // a newer image was opened
+        const lines = []; for (const bl of r.blocks || []) for (const pa of bl.paragraphs) for (const ln of pa.lines) lines.push({ text: ln.text, bbox: ln.bbox, confidence: ln.confidence });
+        results.push({ crop: c, text: r.text, confidence: r.confidence, lines });
+        best = TallygrainScalebar.pickLabel(bar, results);
+        if (best && best.score >= 80) break;
+      }
+    } catch (e) { best = null; console.warn('OCR failed', e); }
+    if (job !== scaleJob) return;
+    $('scaleBusy').textContent = '';
+    $('barPx').value = +barPxOrig.toFixed(1);
+    if (best) {
+      $('barNm').value = +best.nm.toPrecision(6);
+      scaleMsg('Read the scale bar as ' + best.value + ' ' + best.unit + ' = ' + barPxOrig.toFixed(1) + ' px' + (best.guessed ? ' (label partly guessed: "' + best.text + '")' : '') + '. Check the cyan outline and fix the fields if this is wrong.');
+    } else {
+      $('barNm').value = '';  // do not leave the previous image's value next to this bar
+      scaleMsg('Found a bar of ' + barPxOrig.toFixed(1) + ' px (cyan outline) but could not read its label. Type its length in nm.');
+    }
+    run();
   }
 
   /* ---------- AI model (ONNX Runtime Web, loaded on first use) ---------- */
@@ -244,6 +294,11 @@
       for (let i = w * hE; i < w * h; i++) { o[4 * i] *= .3; o[4 * i + 1] *= .3; o[4 * i + 2] *= .3; }
     }
     vctx.putImageData(out, 0, 0);
+    if (scaleBox && scaleBox.img === srcData) {  // outline of the detected scale bar
+      const b = scaleBox.bar, m = Math.max(3, b.thick);
+      vctx.save(); vctx.strokeStyle = '#38d1ff'; vctx.lineWidth = Math.max(2, w / 400); vctx.setLineDash([6, 4]);
+      vctx.strokeRect(b.x0 - m, b.y0 - m, b.len + 2 * m, b.thick + 2 * m); vctx.restore();
+    }
   }
 
   const fmt = (v, k = 1) => isFinite(v) ? v.toFixed(k) : '–';
@@ -381,6 +436,7 @@
   });
 
   /* ---------- Controls ---------- */
+  $('detectScale').addEventListener('click', () => detectScale());
   $('aiModel').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setAiModel(b.dataset.v); run(); });
   $('method').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setMethod(b.dataset.v); run(); });
   function setPolarity(isBright) {

@@ -1,5 +1,29 @@
 # Accuracy against images with a known answer (2026-11-19)
 
+## Update 2026-11-20: automatic scale-bar reading
+
+When you open an image, Tallygrain looks for a scale bar:
+1. **Finding the bar** (`js/scalebar.js`): a solid, thin, horizontal rectangle much darker or brighter than what surrounds it.
+2. **Reading the label** (tesseract.js OCR, in the browser): the app tries the area right of, below, above and left of the bar.
+
+It fills both fields only when it reads a label. That label must be a round value (1, 2, 2.5, 3 or 5 × 10ⁿ), sit where a label belongs, and pass a confidence floor. If the bar is found but the label can't be read, only the px field is filled and the nm field is cleared. The bar is always outlined in cyan so you can check it.
+
+| Test set | Images | Bar length correct | Both fields filled correctly | Filled wrongly | Left for manual entry |
+|---|---|---|---|---|---|
+| Commercial Au TEM (bar px known) | 20 | 20 / 20 | **15** | 0 | 5 |
+| PSDI gold TEM (labels read by eye) | 24 | 24 found* | **12** | 0 | 12 |
+| NanoAnalyzer, images with a bar | 10 (+3 too small to check by eye) | 10 found* | **9** | 0 | 1 |
+| App samples with a bar (JEOL, TESCAN) | 2 | 2 / 2 | **1** | 0 | 1 |
+| **All of the above** | **56** | | **37 (66%)** | **0** | **19** |
+| Images with no scale bar | 9 | | correctly left alone: **9 / 9** | 0 | |
+
+\*Bar length not checked against an independent measurement for PSDI and NanoAnalyzer. Where it was checked, it agreed within 0.5%.
+
+**Caveats:**
+- The confidence floor (20) and the round-value rule were set while looking at these same images. On new images, expect a lower hit rate and possibly some wrong fills, so always check the outline and the fields.
+- Ruler-style bars, like the TESCAN tick ruler, are only found when their outline happens to look solid. Text in very small fonts often can't be read.
+- Reading takes about 1 to 10 s per image. The OCR engine (about 15 MB) downloads on first use and runs locally.
+
 ## Update 2026-11-20 (later): two-model AI mode
 
 AI mode now has two models and picks one per image (**Auto**, the default). You can also force one by hand:

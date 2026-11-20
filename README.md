@@ -59,9 +59,10 @@ about.html            landing page
 css/app.css           app styles
 js/analysis.js        segmentation + measurement (no DOM, runs in Node too)
 js/app.js             UI: loading, viewer, results, export, AI mode
+js/scalebar.js        scale-bar finder + label parser (no DOM)
 models/               ONNX segmentation model + model card
 model/                training, export and batch-prediction scripts (PyTorch)
-vendor/               ONNX Runtime Web 1.17.3 (MIT)
+vendor/               ONNX Runtime Web 1.17.3 (MIT), tesseract.js 7 OCR (Apache-2.0)
 samples/              test micrographs + CREDITS.md
 docs/research.md      idea shortlist, competitors and sources
 docs/test-results.md  how it does on real images
@@ -77,9 +78,9 @@ bench/                benchmark scripts
 - [x] Measure accuracy against images with known answers ([bench/](bench/README.md))
 - [x] Background flattening for uneven illumination
 - [x] Trained segmentation model (AI mode) for particles on supports
-- [ ] Train on more varied, shippable data (bright-field TEM, SEM)
+- [x] Second AI model for dispersed particles (bright-field gold TEM), picked automatically per image
 - [ ] Size filter / two-population view for bimodal samples
-- [ ] Read the scale bar automatically
+- [x] Read the scale bar automatically (bar + OCR label, user confirms; see docs/accuracy.md)
 - [ ] Batch mode: many images in, one combined distribution out
 - [ ] Histogram export with log-normal fit
 - [ ] Desktop "snap" hotkey that sizes whatever micrograph is on screen
