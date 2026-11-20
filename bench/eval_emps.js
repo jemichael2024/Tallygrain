@@ -8,7 +8,7 @@ let TP = 0, NP = 0, NG = 0; const errs = [];
 for (const [n, m] of Object.entries(meta)) {
   const d = new Uint8ClampedArray(fs.readFileSync(S + '/' + n + '.raw'));
   const gt = new Int32Array(fs.readFileSync(S + '/' + n + '.gt').buffer.slice(0));
-  const o = { nmPerPx: 1, bright: m.bright, minArea: 10, elongMax: 99, solidityMin: 0, cropPct: 0, flatten, split: true, splitStrength: 1 };
+  const o = { nmPerPx: 1, bright: m.bright, minArea: 10, elongMax: 99, solidityMin: 0, cropPct: 0, flatten, split: true, splitStrength: 1, cleanup: !process.argv.includes("nocleanup") };
   if (probDir) {
     const p = new Float32Array(fs.readFileSync(probDir + '/' + n + '.prob').buffer.slice(0)), N = m.w * m.h;
     o.prob = { fg: p.subarray(0, N), core: p.subarray(N, 2 * N) };

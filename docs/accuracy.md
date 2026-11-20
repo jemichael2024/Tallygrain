@@ -1,5 +1,32 @@
 # Accuracy against images with a known answer (2026-11-19)
 
+## Update 2026-11-20: more training data, and a clean-up step
+
+**What changed in the app:** AI mode now cleans up the model's particle mask before measuring. It fills small holes inside particles and drops blobs that have no predicted particle centre. The model weights are unchanged (v1), because none of the retrained models beat v1 overall (see below).
+
+**New test sets (evaluation only, not shipped):**
+- **PSDI real gold TEM:** 24 experimental bright-field TEM images of Au spheres and rods, 1,109 hand-outlined particles. CC BY 4.0. Stewart & Da Silva De Sa, PSDI record sgvf0-j3g53. Scored at half resolution.
+- **NanoAnalyzer:** 20 bright-field TEM/STEM images of supported particles with binary masks, 2,635 particles (touching particles in the mask count as one). GPL-3.0. ExtraUnity/NanoAnalyzer.
+
+F1 at IoU ≥ 0.5 (box IoU for ArdaGen, mask IoU for the rest). Gold 50 nm is the median per-image D50 (true value 50 nm).
+
+| Test set | Threshold (default settings) | v1 (before) | **v1 + clean-up (shipped)** | v2a: + synthetic + PSDI gold | v2b: + PSDI gold only |
+|---|---|---|---|---|---|
+| ArdaGen catalysts, 7 held-out | 0.011 | 0.409 | **0.502** | 0.191 | 0.280 |
+| EMPS, 99 images | 0.055 | 0.188 | 0.231 | **0.264** | 0.221 |
+| NanoAnalyzer, 20 images | 0.032 | 0.354 | **0.436** | 0.177 | 0.316 |
+| PSDI real gold TEM, 24 images | **0.332** | 0.095 | 0.133 | 0.213 | 0.172 |
+| Commercial Au 50 nm, D50 | **49.4 nm** | 15.8 nm | 20.6 nm | **49.3 nm** | 38.2 nm |
+
+**Reading this:**
+- The clean-up step alone lifted v1 on every set. That is the shipped change.
+- Training on 400 synthetic gold TEM images (PSDI train split) plus our own synthetic bright-field images fixed 50 nm gold sizing (49.3 nm). The cost was that the model started marking support texture as particles, so catalyst F1 dropped from 0.50 to 0.19. Dropping our synthetic images (v2b) did not solve this.
+- On clean bright-field gold, plain thresholding is still the best method (F1 0.33 and D50 49.4 nm). The app's advice stays the same: **Threshold for clean, dispersed particles; AI model for particles on textured supports.**
+- Likely next lever: a larger model, or separate "dispersed" and "supported" models. One small CPU-trained model is trading one domain off against the other.
+- The 40 nm and 80 nm commercial-gold sets fail for every method, including thresholding, so the problem is probably those images' scale metadata, not detection.
+
+Training data options added: `model/synth.py` (synthetic bright-field TEM with exact masks), `model/coco.py` + `--psdi` (PSDI COCO outlines), `--invert`, `--extra`. Bench prep: `bench/prep_psdi.py`, `bench/prep_nanoanalyzer.py`.
+
 ## Update: trained segmentation model (AI mode)
 
 A small U-Net (1.9 M parameters, [models/README.md](../models/README.md)) trained on CPU on 26 of the 33 ArdaGen catalyst images. Scored on the 7 held-out images, which the model never saw. Matching is stricter than the section below: a detection counts only if its bounding box overlaps a labelled box with IoU of at least 0.5.

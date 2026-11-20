@@ -239,6 +239,32 @@
     return comps;
   }
 
+  // AI-mode cleanup of the particle mask: (1) fill small enclosed holes (the model sometimes leaves gaps
+  // inside pale particles, which would otherwise split them), (2) drop blobs that contain no predicted core
+  // (texture specks and fragments rather than particles).
+  function cleanMask(mask, core, w, hEff) {
+    const n = w * hEff;
+    const fgL = labelComponents(mask, w, hEff);
+    const areas = new Int32Array(fgL.n + 1), hasCore = new Uint8Array(fgL.n + 1);
+    for (let i = 0; i < n; i++) { const l = fgL.labels[i]; if (l) { areas[l]++; if (core[i] > 0.5) hasCore[l] = 1; } }
+    const sorted = Array.from(areas.subarray(1)).sort((a, b) => a - b);
+    const med = sorted.length ? sorted[sorted.length >> 1] : 0;
+    const inv = new Uint8Array(n);
+    for (let i = 0; i < n; i++) inv[i] = mask[i] ? 0 : 1;
+    const bg = labelComponents(inv, w, hEff);
+    const bArea = new Int32Array(bg.n + 1), border = new Uint8Array(bg.n + 1);
+    for (let y = 0; y < hEff; y++) for (let x = 0; x < w; x++) {
+      const l = bg.labels[y * w + x]; if (!l) continue;
+      bArea[l]++; if (x === 0 || y === 0 || x === w - 1 || y === hEff - 1) border[l] = 1;
+    }
+    const holeMax = Math.max(4, 0.3 * med);
+    for (let i = 0; i < n; i++) {
+      const b = bg.labels[i];
+      if (b && !border[b] && bArea[b] <= holeMax) mask[i] = 1;
+      else { const l = fgL.labels[i]; if (l && !hasCore[l]) mask[i] = 0; }
+    }
+  }
+
   /**
    * rgba: Uint8ClampedArray (w*h*4). Options:
    *  nmPerPx, bright (bool), minArea (px), elongMax, solidityMin, cropPct (bottom strip ignored),
@@ -257,7 +283,9 @@
     let fg = 0, autoThr = null, thr = null;
     if (o.prob) {
       // AI mode: the segmentation model's particle probability replaces blur + flatten + threshold.
-      for (let i = 0; i < nEff; i++) { mask[i] = o.prob.fg[i] > 0.5 ? 1 : 0; fg += mask[i]; }
+      for (let i = 0; i < nEff; i++) mask[i] = o.prob.fg[i] > 0.5 ? 1 : 0;
+      if (o.cleanup !== false) cleanMask(mask, o.prob.core, w, hEff);
+      for (let i = 0; i < nEff; i++) fg += mask[i];
     } else {
       let bl = blur3(toGray(rgba, n), w, h);
       if (o.flatten) bl = flattenBackground(bl, w, h, hEff, o.bgCell || autoBgCell(w, hEff), bright);
