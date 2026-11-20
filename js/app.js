@@ -394,6 +394,15 @@
   let timer = 0;
   function schedule() { clearTimeout(timer); timer = setTimeout(run, 120); }
   window.addEventListener('resize', () => { if (fitMode) applyZoom(); drawHist(); });
+  // Light / dark mode toggle. Without a saved choice the page follows the system setting.
+  $('themeToggle').addEventListener('click', () => {
+    const root = document.documentElement;
+    const isDark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = isDark ? 'light' : 'dark';
+    try { localStorage.setItem('tallygrain-theme', root.dataset.theme); } catch (e) {}
+    drawHist();
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawHist());
 
   // Start on a real micrograph when served over http, synthetic otherwise (file:// blocks pixel reads).
   loadSample(location.protocol === 'file:' ? 'synthetic' : 'gold');
