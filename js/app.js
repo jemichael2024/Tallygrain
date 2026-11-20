@@ -28,7 +28,10 @@
   let truth = null;
   let bright = true;
   let method = 'threshold';     // 'threshold' or 'ai'
-  let prob = null, probFor = null, session = null, modelBusy = false, modelMs = 0;
+  let prob = null, probFor = null, modelBusy = false, modelMs = 0;
+  // Two models: 'supported' (catalyst supports) and 'dispersed' (clean film). aiModel is 'auto' or one of them.
+  const MODELS = { supported: 'models/tallygrain-unet.onnx', dispersed: 'models/tallygrain-unet-dispersed.onnx' };
+  const sessions = {}; let aiModel = 'auto', probs = {}, choice = null;
 
   /* ---------- Synthetic sample ---------- */
   function rng(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -113,7 +116,7 @@
     img.onload = () => {
       truth = null; drawImage(img); URL.revokeObjectURL(url);
       $('sample').value = '';
-      setSettings({ barNm: $('barNm').value, barPx: $('barPx').value, crop: 8, bright: bright, minArea: 20, elong: 1.5 });
+      setSettings({ barNm: $('barNm').value, barPx: $('barPx').value, crop: 8, bright: bright, minArea: 20, elong: 1.5, method });  // keep the chosen method
       afterLoad(file.name);
     };
     img.onerror = () => status('The browser could not read ' + file.name + '. 16-bit TIFFs often fail; export as PNG first.');
@@ -130,16 +133,16 @@
   function loadScript(url) {
     return new Promise((ok, fail) => { const t = document.createElement('script'); t.src = url; t.onload = ok; t.onerror = () => fail(new Error('could not load ' + url)); document.head.appendChild(t); });
   }
-  async function ensureSession() {
-    if (session) return session;
+  async function ensureSession(name) {
+    if (sessions[name]) return sessions[name];
     if (!window.ort) await loadScript('vendor/onnxruntime-web/ort.wasm.min.js');
     ort.env.wasm.wasmPaths = 'vendor/onnxruntime-web/';
     ort.env.wasm.numThreads = 1;
-    session = await ort.InferenceSession.create('models/tallygrain-unet.onnx', { executionProviders: ['wasm'] });
-    return session;
+    sessions[name] = await ort.InferenceSession.create(MODELS[name], { executionProviders: ['wasm'] });
+    return sessions[name];
   }
   // Same preprocessing as model/train.py: grayscale, per-image zero mean / unit variance, pad to a multiple of 16.
-  async function computeProb() {
+  async function computeProb(session) {
     const w = src.width, h = src.height, d = srcData.data, N = w * h;
     const W = Math.ceil(w / 16) * 16, H = Math.ceil(h / 16) * 16;
     const g = new Float32Array(N); let mean = 0;
@@ -160,6 +163,24 @@
     $('method').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === m)));
     document.querySelector('.thr-only').hidden = m === 'ai';
     $('aiNote').hidden = m !== 'ai';
+    $('aiModelField').hidden = m !== 'ai';
+  }
+  function setAiModel(m) {
+    aiModel = m; probFor = null;
+    $('aiModel').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === m)));
+  }
+  // Run the model(s) the current setting needs on the current image, then pick the probability maps to use.
+  async function modelProb() {
+    if (probs.img !== srcData) probs = { img: srcData };
+    const need = aiModel === 'auto' ? ['supported', 'dispersed'] : [aiModel];
+    for (const name of need) if (!probs[name]) probs[name] = await computeProb(await ensureSession(name));
+    if (aiModel === 'auto') {
+      choice = A.chooseModel(srcData.data, src.width, src.height, probs.supported, probs.dispersed);
+      $('aiPick').textContent = 'Auto picked: ' + choice.pick + ' (centre ratio ' + choice.ratio.toFixed(2) + ', texture ' + choice.texture.toFixed(2) + ')';
+      return probs[choice.pick];
+    }
+    choice = { pick: aiModel }; $('aiPick').textContent = '';
+    return probs[aiModel];
   }
 
   function run() {
@@ -168,8 +189,8 @@
       if (!modelBusy) {
         modelBusy = true;
         const t0 = performance.now();
-        status('Running the AI model on ' + src.width + ' × ' + src.height + ' px… (first run downloads the model)');
-        ensureSession().then(computeProb).then(p => {
+        status('Running the AI model' + (aiModel === 'auto' ? 's' : '') + ' on ' + src.width + ' × ' + src.height + ' px… (first run downloads the model)');
+        modelProb().then(p => {
           prob = p; probFor = srcData; modelBusy = false; modelMs = performance.now() - t0; run();
         }).catch(e => { modelBusy = false; setMethod('threshold'); status('The AI model could not run: ' + e.message + '. Switched back to threshold.'); run(); });
       }
@@ -282,7 +303,7 @@
     const parts = [
       Math.round(src.width / scaleFactor) + '×' + Math.round(src.height / scaleFactor) + ' px',
       (isFinite(s) ? (s * scaleFactor).toFixed(3) + ' nm/px' : 'no scale'),
-      ...(method === 'ai' ? ['AI model (' + fmt(modelMs / 1000, 1) + ' s)'] : [
+      ...(method === 'ai' ? ['AI model: ' + (choice ? choice.pick : '') + (aiModel === 'auto' ? ' (auto)' : '') + ' (' + fmt(modelMs / 1000, 1) + ' s)'] : [
       ($('flatten').checked ? 'flattened (' + Math.round((+$('bgCell').value || A.autoBgCell(src.width, result.hEff) / scaleFactor)) + ' px cells)' : 'no flattening'),
       'threshold ' + result.threshold + ($('autoThr').checked ? ' (Otsu)' : ' (manual)')]),
       result.comps.length + ' regions' + (result.splitCount ? ' (' + result.splitCount + ' from splits)' : ''),
@@ -350,7 +371,7 @@
     if (!result) return;
     const s = nmPerPx() * scaleFactor;
     const rows = result.comps.filter(c => c.cls === 'ok').map((c, k) => [k + 1, c.dNm.toFixed(2), c.areaNm2.toFixed(1), c.ar.toFixed(3), (c.cx / scaleFactor).toFixed(1), (c.cy / scaleFactor).toFixed(1)].join(','));
-    const head = '# Tallygrain export, image: ' + name + ', scale: ' + s.toFixed(4) + ' nm/px, threshold: ' + result.threshold + '\n# n=' + summary.n + ', mean=' + fmt(summary.mean, 2) + ' nm, sd=' + fmt(summary.sd, 2) + ' nm, D10=' + fmt(summary.d10, 2) + ', D50=' + fmt(summary.d50, 2) + ', D90=' + fmt(summary.d90, 2) + '\n';
+    const head = '# Tallygrain export, image: ' + name + ', scale: ' + s.toFixed(4) + ' nm/px, method: ' + (method === 'ai' ? 'AI model (' + (choice ? choice.pick : '') + (aiModel === 'auto' ? ', auto' : '') + ')' : 'threshold ' + result.threshold) + '\n# n=' + summary.n + ', mean=' + fmt(summary.mean, 2) + ' nm, sd=' + fmt(summary.sd, 2) + ' nm, D10=' + fmt(summary.d10, 2) + ', D50=' + fmt(summary.d50, 2) + ', D90=' + fmt(summary.d90, 2) + '\n';
     download(new Blob([head + 'id,diameter_nm,area_nm2,aspect_ratio,x_px,y_px\n' + rows.join('\n') + '\n'], { type: 'text/csv' }), base() + '_particles.csv');
   });
   $('exportPng').addEventListener('click', () => {
@@ -360,6 +381,7 @@
   });
 
   /* ---------- Controls ---------- */
+  $('aiModel').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setAiModel(b.dataset.v); run(); });
   $('method').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; setMethod(b.dataset.v); run(); });
   function setPolarity(isBright) {
     bright = isBright;

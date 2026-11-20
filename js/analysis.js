@@ -265,6 +265,37 @@
     }
   }
 
+  // Two-model AI mode: decide per image between the "supported" model (particles on textured catalyst
+  // supports) and the "dispersed" model (separate particles on a clean film, e.g. bright-field gold TEM).
+  // Pick "dispersed" when it finds no more particle centres than the supported model AND the background
+  // (where the supported model sees no particle) has little fine texture. Thresholds were chosen on the
+  // benchmark sets in docs/accuracy.md, so treat them as a heuristic, not a law.
+  function chooseModel(rgba, w, h, probSup, probDis) {
+    const n = w * h, g = toGray(rgba, n);
+    const count = core => { const m = new Uint8Array(n); for (let i = 0; i < n; i++) m[i] = core[i] > 0.5 ? 1 : 0; return labelComponents(m, w, h).n; };
+    const nSup = count(probSup.core), nDis = count(probDis.core);
+    // Fine texture: residual after a Gaussian blur (sigma 2 px), measured on background pixels, relative to image contrast.
+    const r = 6, k = []; let ks = 0;
+    for (let i = -r; i <= r; i++) { const v = Math.exp(-i * i / 8); k.push(v); ks += v; }
+    const tmp = new Float32Array(n), bl = new Float32Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let a = 0; for (let i = -r; i <= r; i++) { const xx = Math.min(w - 1, Math.max(0, x + i)); a += k[i + r] * g[y * w + xx]; } tmp[y * w + x] = a / ks;
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let a = 0; for (let i = -r; i <= r; i++) { const yy = Math.min(h - 1, Math.max(0, y + i)); a += k[i + r] * tmp[yy * w + x]; } bl[y * w + x] = a / ks;
+    }
+    let gm = 0; for (let i = 0; i < n; i++) gm += g[i]; gm /= n;
+    let gv = 0, hs = 0, hs2 = 0, hn = 0;
+    for (let i = 0; i < n; i++) {
+      gv += (g[i] - gm) * (g[i] - gm);
+      if (probSup.fg[i] < 0.2) { const d = g[i] - bl[i]; hs += d; hs2 += d * d; hn++; }
+    }
+    const gsd = Math.sqrt(gv / n) + 1e-6;
+    const texture = hn ? Math.sqrt(Math.max(0, hs2 / hn - (hs / hn) ** 2)) / gsd : 0;
+    const ratio = nDis / Math.max(nSup, 1);
+    return { pick: ratio < 1.0 && texture < 0.2 ? 'dispersed' : 'supported', ratio, texture, nSup, nDis };
+  }
+
   /**
    * rgba: Uint8ClampedArray (w*h*4). Options:
    *  nmPerPx, bright (bool), minArea (px), elongMax, solidityMin, cropPct (bottom strip ignored),
@@ -370,7 +401,7 @@
     };
   }
 
-  const api = { analyze, summarize, percentile, otsu, autoBgCell };
+  const api = { analyze, summarize, percentile, otsu, autoBgCell, chooseModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TallygrainAnalysis = api;
 })(typeof window !== 'undefined' ? window : this);

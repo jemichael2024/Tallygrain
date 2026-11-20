@@ -1,5 +1,28 @@
 # Accuracy against images with a known answer (2026-11-19)
 
+## Update 2026-11-20 (later): two-model AI mode
+
+AI mode now has two models and picks one per image (**Auto**, the default). You can also force one by hand:
+- **Supported:** v1 + clean-up. For particles on textured catalyst supports.
+- **Dispersed:** the gold-trained v2a + clean-up. For separate particles on a clean film.
+
+Auto runs both models, then picks **Dispersed** only when two things hold (`chooseModel` in `js/analysis.js`):
+- the dispersed model finds no more particle centres than the supported model, and
+- the background has little fine texture: the high-pass residual on non-particle pixels is below 0.2 of the image's contrast.
+
+| Test set (F1 at IoU ≥ 0.5) | Threshold | Supported only (before) | **Auto (shipped)** | Auto picked Dispersed |
+|---|---|---|---|---|
+| ArdaGen catalysts, 7 held-out | 0.011 | **0.502** | 0.492 | 12 of all 33 images |
+| EMPS, 99 images | 0.055 | 0.231 | **0.282** | 33 of 99 |
+| NanoAnalyzer, 20 images | 0.032 | **0.436** | **0.436** | 0 of 20 |
+| PSDI real gold TEM, 24 images | **0.332** | 0.133 | 0.271 | 19 of 24 |
+| Commercial Au 50 nm, median D50 (true 50) | 49.4 nm | 20.6 nm | **51.8 nm** | 13 of 20 gold images |
+
+**Caveats:**
+- The two cut-offs (1.0 and 0.2) were chosen by looking at these same test sets. That is a mild form of tuning on the test data. Only two coarse values were tried, but the real-world gain may be a little smaller than this table shows.
+- On clean gold, plain thresholding is still better (F1 0.33 vs 0.27). Auto mostly closes the gap for AI mode rather than beating thresholding.
+- Running both models takes about twice as long as one: roughly 10 s for a 1,200 px image on a laptop CPU.
+
 ## Update 2026-11-20: more training data, and a clean-up step
 
 **What changed in the app:** AI mode now cleans up the model's particle mask before measuring. It fills small holes inside particles and drops blobs that have no predicted particle centre. The model weights are unchanged (v1), because none of the retrained models beat v1 overall (see below).

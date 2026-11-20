@@ -55,7 +55,16 @@
           <button type="button" role="radio" aria-checked="true" data-v="threshold">Threshold</button>
           <button type="button" role="radio" aria-checked="false" data-v="ai">AI model</button>
         </div>
-        <p class="hint" id="aiNote" hidden>Trained on STEM/TEM images of metal nanoparticles on catalyst supports. Downloads about 18 MB the first time and runs on your computer; images are not uploaded.</p>
+        <p class="hint" id="aiNote" hidden>Runs on your computer; images are not uploaded. Downloads about 16 MB of models the first time.</p>
+      </div>
+      <div class="field" id="aiModelField" hidden><label for="aiModel">Model</label>
+        <div class="seg three" role="radiogroup" id="aiModel">
+          <button type="button" role="radio" aria-checked="true" data-v="auto">Auto</button>
+          <button type="button" role="radio" aria-checked="false" data-v="supported">Supported</button>
+          <button type="button" role="radio" aria-checked="false" data-v="dispersed">Dispersed</button>
+        </div>
+        <p class="hint">Supported: particles on a textured catalyst support. Dispersed: separate particles on a clean film, such as gold TEM. Auto runs both and picks one per image.</p>
+        <p class="hint mono" id="aiPick"></p>
       </div>
       <div class="thr-only">
       <div class="field"><label for="polarity">Particles appear</label>

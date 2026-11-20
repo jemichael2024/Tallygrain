@@ -81,6 +81,7 @@ input.mini { width: 72px; font-family: var(--f-mono); font-size: 13px; padding: 
 
 .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg button { font: inherit; font-size: 12px; padding: 5px; border: 0; background: var(--raised); color: var(--muted); cursor: pointer; }
+.seg.three { grid-template-columns: 1fr 1fr 1fr; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-checked=true] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 

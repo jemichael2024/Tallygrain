@@ -14,3 +14,13 @@
 Not used for training: EMPS (by256/emps). Its repository is MIT, but the images are figures from published journal articles whose copyright sits with the publishers, so a model trained on them may not be shippable. EMPS is used only as a local test set (`bench/eval_emps.js`).
 
 Tried on 2026-11-20 and not shipped (results in [docs/accuracy.md](../docs/accuracy.md)): adding 400 synthetic gold TEM images from the PSDI dataset (CC BY 4.0, record sgvf0-j3g53, which would be shippable with attribution), our own synthetic bright-field images (`model/synth.py`), and brightness-inverted catalyst images. These fixed gold sizing but cut catalyst accuracy, so v1 stays. NanoAnalyzer images (GPL-3.0) are used only for testing, because training a no-licence app's model on GPL data is legally unclear.
+
+## Dispersed model (`tallygrain-unet-dispersed.onnx`, added 2026-11-20)
+
+This model has the same architecture as the main one. AI mode uses it for separate particles on a clean film. In Auto mode, the app picks between the two models per image (see docs/accuracy.md).
+
+| | |
+|---|---|
+| Training data | ArdaGen as above (MIT), plus brightness-inverted copies, plus 300 synthetic bright-field images from `model/synth.py` (ours), plus 400 images from the train split of the **PSDI synthetic gold nanoparticle TEM dataset**: Stewart, A.; Da Silva De Sa, N. *Testing, Training and Validation Synthetic Dataset of TEM Images of Gold Nano-particles for Segmentation*, PSDI record sgvf0-j3g53 (2026), licence **CC BY 4.0**. |
+| Command | `python3 model/train.py <ardagen> <out> --iters 3000 --synth 300 --invert 0.3 --psdi <psdi dir> --psdi-n 400` |
+| Licence of the weights | Derived from MIT and CC BY 4.0 data. Redistribution requires the attribution above. |
